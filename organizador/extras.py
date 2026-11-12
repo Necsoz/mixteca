@@ -1,5 +1,5 @@
 """Fontes extras LOCAIS e opcionais: arquivos .py colocados na pasta `extras`, dentro da pasta de dados do usuário
-(no Windows: %APPDATA%\\OrganizadorMusical\\extras). Nada disso faz parte do programa distribuído: quem não colocar
+(no Windows: %APPDATA%\\Mixteca\\extras). Nada disso faz parte do programa distribuído: quem não colocar
 nenhum arquivo ali usa apenas as fontes padrão. Cada extra define:
 
     FONTE = "Nome"                      # como aparece na tela

@@ -36,7 +36,7 @@ def pasta_dados() -> Path:
         base = os.environ.get("APPDATA")
     else:
         base = os.environ.get("XDG_DATA_HOME") or str(Path.home() / ".local" / "share")
-    pasta = Path(base or Path.home()) / "OrganizadorMusical"
+    pasta = Path(base or Path.home()) / "Mixteca"
     pasta.mkdir(parents=True, exist_ok=True)
     return pasta
 

@@ -9,6 +9,7 @@ import secrets
 import subprocess
 import sys
 import threading
+import time
 import webbrowser
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -51,6 +52,7 @@ class Estado:
         self.faixas = []
         self.origem = ""
         self.destino_copia = ""
+        self.ultimo_sinal = 0.0  # último pedido da página (modo navegador)
         self.lados_capa: dict[str, int] = {}
         self.cancelar = threading.Event()
         self.pausa = threading.Event()
@@ -637,7 +639,7 @@ def r_cancelar(_):
     return {"ok": True}
 
 
-ROTAS_GET = {"/api/estado": r_estado, "/api/faixas": r_faixas, "/api/sem-genero": r_sem_genero,
+ROTAS_GET = {"/api/vivo": lambda _: {"ok": True}, "/api/estado": r_estado, "/api/faixas": r_faixas, "/api/sem-genero": r_sem_genero,
              "/api/config": r_config, "/api/grupos": r_grupos, "/api/propostas": r_propostas, "/api/precisao-som": r_precisao_som}
 ROTAS_POST = {
     "/api/pasta": r_pasta, "/api/analisar": r_analisar, "/api/padroes": r_padroes, "/api/previa": r_previa,
@@ -704,6 +706,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(404, {"erro": "Não encontrado."})
         if not self._autorizado():
             return self._json(403, {"erro": "Acesso negado."})
+        E.ultimo_sinal = time.monotonic()
         try:
             self._json(200, funcao(corpo))
         except Erro as e:
@@ -743,14 +746,53 @@ def _abrir_janela(url: str) -> None:
     webbrowser.open(url)
 
 
+def _preparar_saida() -> None:
+    """Sem janela de terminal (programa instalado) não existe saída padrão: mensagens e erros vão para um arquivo de log."""
+    if sys.stdout is None or sys.stderr is None:
+        try:
+            log = open(pasta_dados() / "mixteca.log", "a", encoding="utf-8", buffering=1)
+            sys.stdout = sys.stdout or log
+            sys.stderr = sys.stderr or log
+        except OSError:
+            pass
+
+
+def _janela_propria(url: str) -> bool:
+    """Abre o programa em uma janela própria (WebView do Windows). Só volta quando a janela é fechada.
+    Devolve False se não der (biblioteca ou WebView ausente): aí o programa usa o navegador."""
+    try:
+        import webview
+        webview.create_window("Mixteca", url, width=1240, height=860, min_size=(900, 600))
+        webview.start()
+        return True
+    except Exception as e:  # noqa: BLE001
+        print(f"Janela própria indisponível ({e}); usando o navegador.")
+        return False
+
+
+def _vigia_do_navegador() -> None:
+    """No modo navegador não há janela para fechar o programa: ele encerra sozinho quando a página some
+    (sem sinal de vida por alguns minutos) e nenhuma tarefa está rodando."""
+    while True:
+        time.sleep(15)
+        with E.lock:
+            ocupado = E.job["fase"] == "rodando"
+        if E.ultimo_sinal and not ocupado and time.monotonic() - E.ultimo_sinal > 180:
+            os._exit(0)
+
+
 def iniciar(abrir_navegador: bool = True) -> None:
+    _preparar_saida()
     srv = criar_servidor()
     url = f"http://127.0.0.1:{srv.server_address[1]}/"
-    print(f"Organizador Musical rodando.\nSe a janela não aparecer, abra este endereço no navegador:\n  {url}\n"
-          "Para fechar o programa, feche esta janela.")
+    print(f"Mixteca rodando em {url}")
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
     if abrir_navegador:
-        threading.Timer(0.8, lambda: _abrir_janela(url)).start()
+        if _janela_propria(url):
+            return  # janela fechada: encerra o programa
+        _abrir_janela(url)
+        threading.Thread(target=_vigia_do_navegador, daemon=True).start()
     try:
-        srv.serve_forever()
+        threading.Event().wait()
     except KeyboardInterrupt:
         pass

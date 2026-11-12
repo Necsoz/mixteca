@@ -29,8 +29,15 @@ jobs:
           python tests/test_identificacao.py
       - name: Empacotar
         run: |
-          pyinstaller --noconfirm --onedir --name OrganizadorMusical --add-data "organizador/web;organizador/web" iniciar.py
-          Copy-Item -Recurse ferramentas dist\OrganizadorMusical\ferramentas
-          Copy-Item LICENCAS.md dist\OrganizadorMusical\
+          pyinstaller --noconfirm --onedir --windowed --name Mixteca --icon empacotar/mixteca.ico --add-data "organizador/web;organizador/web" iniciar.py
+          Copy-Item -Recurse ferramentas dist\Mixteca\ferramentas
+          Copy-Item LICENCAS.md, LICENSE dist\Mixteca\
+      - name: Gerar instalador
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress }
+          & $iscc empacotar\mixteca.iss
       - uses: actions/upload-artifact@v4
-        with: { name: OrganizadorMusical-Windows, path: dist/OrganizadorMusical }
+        with: { name: Mixteca-Instalador, path: dist/Mixteca-Setup.exe }
+      - uses: actions/upload-artifact@v4
+        with: { name: Mixteca-Portatil, path: dist/Mixteca }

@@ -32,7 +32,7 @@ def _urllib(url: str, cabecalhos: dict, timeout: float):
 
 class Cliente:
     def __init__(self, contato: str = "", cache=None, transporte=None, dormir=time.sleep, relogio=time.monotonic):
-        self.agente = f"OrganizadorMusical/{__version__} ( {(contato or '').strip() or CONTATO_PADRAO} )"
+        self.agente = f"Mixteca/{__version__} ( {(contato or '').strip() or CONTATO_PADRAO} )"
         self.cache, self._transp = cache, transporte or _urllib
         self._dormir, self._relogio = dormir, relogio
         self._ultimo: dict[str, float] = {}

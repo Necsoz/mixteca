@@ -1,6 +1,6 @@
 """Configurações LOCAIS: preferências pessoais e credenciais de serviços.
 
-Tudo fica na pasta de dados do usuário (no Windows: %APPDATA%\\OrganizadorMusical), fora do programa e fora do
+Tudo fica na pasta de dados do usuário (no Windows: %APPDATA%\\Mixteca), fora do programa e fora do
 repositório. Sem o arquivo de preferências, o app usa a classificação padrão.
 """
 import json

@@ -1,6 +1,10 @@
-# Mixteca (Organizador Musical)
+# Mixteca
 
 Programa pessoal para organizar músicas em pastas por **gênero → BPM → tom (Camelot)** e achar o que combina na hora de tocar.
+
+## Como instalar
+
+Na aba **Actions** do repositório, rode **Gerar programa para Windows** e baixe o resultado **Mixteca-Instalador** (`Mixteca-Setup.exe`). Ele instala o programa, cria os atalhos e tem desinstalador. Também há a versão **Mixteca-Portatil**, que roda sem instalar. O programa abre em janela própria (usa o WebView2 do Windows 10/11; sem ele, abre no navegador).
 
 - Lê o **BPM e o tom direto do áudio** (sem tocar as músicas) e o gênero das tags que já existem.
 - Músicas **sem gênero nas tags** aparecem num painel agrupadas por artista: você escolhe o gênero (vale para todas as músicas dele), e o BPM é recalculado já com o gênero. O gênero fica guardado só no programa; os arquivos não são alterados.
@@ -12,7 +16,7 @@ Programa pessoal para organizar músicas em pastas por **gênero → BPM → tom
 - Tela da biblioteca: clique numa música e veja as que combinam (tom compatível + BPM parecido).
 
 ## Identificação e metadados (v0.3)
-**Como decide.** Para cada música incompleta: (1) usa as tags e o nome do arquivo (`Artista - Título`) e a duração; (2) busca no **MusicBrainz** e, se você tiver chave gratuita do **AcoustID** e o `fpcalc` na pasta `ferramentas/`, também reconhece pelo som; (3) pega capa oficial no **Cover Art Archive** (só imagem frontal de boa resolução; sem capa confiável, não aplica nada); (4) opcionalmente cruza gêneros com o **Last.fm** (chave gratuita). Nada é pesquisado de novo (cache em `%APPDATA%\OrganizadorMusical`), o ritmo respeita os limites de cada serviço e dá para pausar, cancelar e continuar de onde parou.
+**Como decide.** Para cada música incompleta: (1) usa as tags e o nome do arquivo (`Artista - Título`) e a duração; (2) busca no **MusicBrainz** e, se você tiver chave gratuita do **AcoustID** e o `fpcalc` na pasta `ferramentas/`, também reconhece pelo som; (3) pega capa oficial no **Cover Art Archive** (só imagem frontal de boa resolução; sem capa confiável, não aplica nada); (4) opcionalmente cruza gêneros com o **Last.fm** (chave gratuita). Nada é pesquisado de novo (cache em `%APPDATA%\Mixteca`), o ritmo respeita os limites de cada serviço e dá para pausar, cancelar e continuar de onde parou.
 
 **Confiança.** *Alta* (título, artista e duração batem): aplicada sozinha apenas em campos que estavam vazios (dá para desligar). *Média*: aparece para você conferir e aceitar (individual ou em lote). *Baixa*: só aceita uma a uma. Trocas de informação que já existia sempre pedem conferência. Cada sugestão mostra valor atual, valor novo, fonte e nível.
 
@@ -20,9 +24,9 @@ Programa pessoal para organizar músicas em pastas por **gênero → BPM → tom
 
 **Segurança.** Os originais nunca são alterados. Os dados novos só são gravados nas **cópias** (tags e capa via FFmpeg), e as tags anteriores ficam registradas no log do destino. Tudo pode ser desfeito na tela da biblioteca.
 
-**Preferências pessoais (opcional, locais).** Regras como "agrupar subgêneros" ou "artistas X de 2011–2016 = Big Room" ficam em `user_preferences.json` dentro de `%APPDATA%\OrganizadorMusical`, **fora do programa e do repositório** (está no `.gitignore`). Sem esse arquivo o programa usa a classificação padrão; não há opção na tela para alternar. As chaves de API ficam em `credenciais.json`, também local.
+**Preferências pessoais (opcional, locais).** Regras como "agrupar subgêneros" ou "artistas X de 2011–2016 = Big Room" ficam em `user_preferences.json` dentro de `%APPDATA%\Mixteca`, **fora do programa e do repositório** (está no `.gitignore`). Sem esse arquivo o programa usa a classificação padrão; não há opção na tela para alternar. As chaves de API ficam em `credenciais.json`, também local.
 
-**Fontes extras locais (opcional).** Quem quiser pode somar outras fontes de gênero colocando arquivos `.py` na pasta `extras` dentro de `%APPDATA%\OrganizadorMusical`. Elas não fazem parte deste repositório, e cada pessoa é responsável por respeitar os termos de uso de qualquer serviço que usar. Sem nenhum arquivo ali, o programa usa só MusicBrainz, Cover Art Archive e, se você informar chave, AcoustID, Last.fm e Discogs.
+**Fontes extras locais (opcional).** Quem quiser pode somar outras fontes de gênero colocando arquivos `.py` na pasta `extras` dentro de `%APPDATA%\Mixteca`. Elas não fazem parte deste repositório, e cada pessoa é responsável por respeitar os termos de uso de qualquer serviço que usar. Sem nenhum arquivo ali, o programa usa só MusicBrainz, Cover Art Archive e, se você informar chave, AcoustID, Last.fm e Discogs.
 
 **Nomes e tags profissionais (nas cópias).** O arquivo copiado vira `Artista - Título.mp3`, sem endereços de sites e restos de vídeo ("Official Video", "www...", "320kbps"...); nomes de sites sem endereço você pode listar em `limpar_termos` nas suas preferências locais; versões como "Original Mix" e créditos de remix ficam. Em mp3, flac e m4a as tags são refeitas só com o que é útil (título, artista, álbum, gênero, ano, faixa...), sem comentários nem "encoded by", e BPM e tom (Camelot) são gravados para programas de DJ (mp3 e flac). As pastas de tom usam zero à esquerda (`01A`, `01B`, `02A`...), então qualquer visualizador as deixa na ordem da roda harmônica, com os tons que combinam por perto.
 
@@ -54,7 +58,7 @@ python tests/e2e_ui.py PASTA_MP3 PASTA_PRINTS   # (e tests/e2e_generos.py) ponta
 ```
 
 ## Estrutura
-`organizador/analise.py` BPM, tom e qualidade · `planejador.py` padrões de pasta e cópia segura · `melhoria.py` cadeia FFmpeg · `servidor.py` + `web/index.html` interface · `identificacao.py`, `decisao.py`, `casamento.py`, `classificador.py`, `taxonomia.py`, `config.py`, `escrita.py`, `provedores/` identificação e metadados · `store.py` cache SQLite em `%APPDATA%\OrganizadorMusical`.
+`organizador/analise.py` BPM, tom e qualidade · `planejador.py` padrões de pasta e cópia segura · `melhoria.py` cadeia FFmpeg · `servidor.py` + `web/index.html` interface · `identificacao.py`, `decisao.py`, `casamento.py`, `classificador.py`, `taxonomia.py`, `config.py`, `escrita.py`, `provedores/` identificação e metadados · `store.py` cache SQLite em `%APPDATA%\Mixteca`.
 
 ## Licença
 

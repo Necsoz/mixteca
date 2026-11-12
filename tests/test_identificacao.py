@@ -129,7 +129,7 @@ def test_cliente_limita_ritmo_repete_e_guarda_cache():
 
     def transp(url, cab, t):
         chamadas.append(url)
-        assert "OrganizadorMusical" in cab["User-Agent"] and "eu@x.com" in cab["User-Agent"]
+        assert "Mixteca" in cab["User-Agent"] and "eu@x.com" in cab["User-Agent"]
         return respostas.pop(0) if respostas else (200, b'{"ok":1}', {})
 
     relogio = [0.0]

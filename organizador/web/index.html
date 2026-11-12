@@ -82,6 +82,8 @@ tr.comp td{background:#ff5c9d1f}
 .cam2 img{width:44px;height:44px;border-radius:6px;object-fit:cover}
 .cam2 small{color:var(--mut)}
 button.mini{padding:2px 10px;font-size:13px}
+button.ed{padding:0 6px;font-size:13px;border-radius:6px;background:transparent;border-color:transparent;color:var(--mut)}
+button.ed:hover{border-color:var(--acc);color:var(--txt)}button.ed.u{color:var(--warn)}
 .fila{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
 .gp{background:var(--card2);border:1px solid var(--bd);border-radius:12px;padding:10px 12px;margin-bottom:8px}
 .gt{font-weight:600;margin-bottom:6px}.gt .q{color:var(--acc);font-size:12px;font-weight:400;margin-left:6px}
@@ -368,10 +370,25 @@ function desenharTabela(){
     const bpm=f.erro?"":`${(f.bpm_conf<3||f.fora)?'<span class="u">~</span>':""}${f.bpm}`;
     const cam=f.erro?`<span class="bad" title="${esc(f.erro)}">erro</span>`:`<span class="cam" style="background:${corCam(f.camelot)}" title="${esc(f.tom)}">${f.camelot}</span>${f.tom_conf<0.01?'<span class="u" title="tom incerto"> ?</span>':""}`;
     const cl=i===selecionada?"sel":compat(faixas[selecionada],f)?"comp":"";
-    return `<tr class="m ${cl}" data-i="${i}"><td title="${esc(f.caminho)}">${esc(nome)}</td><td>${esc(f.album||"—")}</td><td title="${esc(f.genero_fonte||"")}">${esc(f.genero||"—")}${f.genero_manual?' <span class="u" title="definido por você">✎</span>':""}${f.ajustes&&f.ajustes.length?' <span class="u" title="completado pelo programa: '+esc(f.ajustes.join(", "))+'">✎</span>':""}</td><td>${bpm}</td><td>${cam}</td><td>${f.baixa?'<span class="u" title="Agudos cortados em '+Math.round((f.corte_hz||0)/1000)+' kHz">⚠ baixa</span>':'<span class="ok">ok</span>'}</td></tr>`}).join("")+
+    return `<tr class="m ${cl}" data-i="${i}"><td title="${esc(f.caminho)}">${esc(nome)}</td><td>${esc(f.album||"—")}</td><td class="tg" title="${esc(f.genero_fonte?"fonte: "+f.genero_fonte:"")}">${esc(f.genero||"—")}${f.erro?"":` <button class="ed ${(f.genero_manual||(f.ajustes&&f.ajustes.includes("genero")))?"u":""}" data-e="${i}" title="Trocar o gênero desta música">✎</button>`}${f.ajustes&&f.ajustes.some(a=>a!=="genero")?' <span class="u" title="completado pelo programa: '+esc(f.ajustes.join(", "))+'">•</span>':""}</td><td>${bpm}</td><td>${cam}</td><td>${f.baixa?'<span class="u" title="Agudos cortados em '+Math.round((f.corte_hz||0)/1000)+' kHz">⚠ baixa</span>':'<span class="ok">ok</span>'}</td></tr>`}).join("")+
     (lista.length>600?`<tr><td colspan="6" class="hint">Mostrando 600 de ${lista.length}. Use a busca para filtrar.</td></tr>`:"");
+  document.querySelectorAll("#corpo button.ed").forEach(b=>b.onclick=ev=>{ev.stopPropagation();editarGenero(+b.dataset.e,b.closest("td"))});
   document.querySelectorAll("#corpo tr.m").forEach(tr=>tr.onclick=()=>{const i=+tr.dataset.i;selecionada=selecionada===i?null:i;desenharTabela()});
   const sf=faixas[selecionada]; $("#b-desfazer").disabled=!(sf&&sf.ajustes&&sf.ajustes.length);
+}
+
+function editarGenero(i,td){
+  const f=faixas[i]; if(!f||!td) return;
+  td.innerHTML=`<input type="text" list="lista-generos" value="${esc(f.genero||"")}" placeholder="gênero" style="width:150px;padding:4px 8px">`;
+  const inp=td.querySelector("input"); let feito=false; inp.focus(); inp.select();
+  inp.onclick=ev=>ev.stopPropagation();
+  const salvar=async()=>{
+    if(feito) return; feito=true; const v=inp.value.trim();
+    if(v&&v!==f.genero){try{await api("/api/genero-faixa",{caminho:f.caminho,genero:v});await carregar(false);return}catch(e){erro(e.message)}}
+    desenharTabela();
+  };
+  inp.onkeydown=ev=>{if(ev.key==="Enter")salvar();else if(ev.key==="Escape"){feito=true;desenharTabela()}};
+  inp.onblur=salvar;
 }
 
 /* ---------- completar gêneros ---------- */

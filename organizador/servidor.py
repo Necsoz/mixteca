@@ -598,6 +598,19 @@ def r_decidir(c):
     return {"ok": True, "campos": n, "reanalisando": len(reanalise)}
 
 
+def r_genero_faixa(c):
+    """O usuário corrige o gênero de UMA música (vale mais que qualquer fonte; vai para a cópia, o original não muda)."""
+    genero = limpar_genero(str(c.get("genero") or ""))[:60] if c.get("genero") else ""
+    f = next((x for x in E.faixas if x.caminho == c.get("caminho")), None)
+    if f is None or f.erro:
+        raise Erro("Música não encontrada.")
+    if not genero:
+        raise Erro("Escreva o gênero.")
+    genero = E.tax.normalizar(genero)
+    ajustes.registrar(E.cache, E.cache.sobrescritas(), f, {"genero": {"novo": genero, "fonte": "você", "nivel": "alta"}})
+    return {"ok": True, "genero": f.genero}
+
+
 def r_desfazer(c):
     sobre = E.cache.sobrescritas()
     n = 0
@@ -630,7 +643,7 @@ ROTAS_POST = {
     "/api/pasta": r_pasta, "/api/analisar": r_analisar, "/api/padroes": r_padroes, "/api/previa": r_previa,
     "/api/definir-genero": r_definir_genero, "/api/copiar": r_copiar, "/api/melhorar": r_melhorar, "/api/cancelar": r_cancelar,
     "/api/config": r_config_salvar, "/api/identificar": r_identificar, "/api/decidir": r_decidir,
-    "/api/desfazer": r_desfazer, "/api/pausar": r_pausar, "/api/abrir-pasta": r_abrir_pasta, "/api/grupos-mover": r_grupos_mover,
+    "/api/desfazer": r_desfazer, "/api/pausar": r_pausar, "/api/abrir-pasta": r_abrir_pasta, "/api/grupos-mover": r_grupos_mover, "/api/genero-faixa": r_genero_faixa,
 }
 
 

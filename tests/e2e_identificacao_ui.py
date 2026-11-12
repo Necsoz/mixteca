@@ -36,6 +36,8 @@ with sync_playwright() as pw:
     print("resultado:", pg.inner_text("#res-id").replace("\n", " "))
     pg.locator("#si").screenshot(path=str(prints / "id-1-revisao.png"))
     print("propostas restantes:", pg.locator(".prop").count())
+    pg.locator("#corpo button.ed").first.click(); pg.locator("#corpo td.tg input").fill("Tech House"); pg.keyboard.press("Enter"); pg.wait_for_timeout(1500)
+    print("gênero trocado na mão:", pg.locator("#corpo tr.m").first.inner_text().replace("\n", " ").replace("\t", " | ")[:120])
     pg.check("#agrupar"); pg.wait_for_timeout(800)
     print("grupos antes:", pg.inner_text("#grupos-lista").replace("\n", " ")[:160])
     pg.locator("#grupos-lista select").first.select_option(index=1); pg.wait_for_timeout(1500)

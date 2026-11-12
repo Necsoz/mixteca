@@ -28,7 +28,7 @@ from .provedores import acoustid, capas
 from .rede import Cliente, ErroRede
 from .escrita import gravar as gravar_tags_copia
 from .store import Cache
-from .taxonomia import Taxonomia, ler_grupos
+from .taxonomia import Taxonomia, grupo as grupo_genero, ler_grupos, mover_grupo
 
 WEB = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent.parent)) / "organizador" / "web"
 TOKEN = secrets.token_urlsafe(24)
@@ -205,6 +205,27 @@ def r_copiar(c):
 
     E.iniciar("copiar", trabalho)
     return {"ok": True, "total": len(plano)}
+
+
+def r_grupos(_):
+    """Gêneros da biblioteca e a pasta em que cada um cai com "juntar gêneros próximos" ligado."""
+    proprios = ler_grupos(config.carregar_credenciais(E.pasta_config)["grupos_pastas"])
+    conta: dict[str, int] = {}
+    for f in E.faixas:
+        if not f.erro and f.genero:
+            conta[f.genero] = conta.get(f.genero, 0) + 1
+    generos = [{"genero": g, "qtd": n, "pasta": grupo_genero(g, proprios), "proprio": grupo_genero(g, proprios) != grupo_genero(g)}
+               for g, n in sorted(conta.items(), key=lambda kv: kv[0].casefold())]
+    return {"generos": generos}
+
+
+def r_grupos_mover(c):
+    genero = str(c.get("genero") or "").strip()
+    if not genero:
+        raise Erro("Escolha um gênero.")
+    cred = config.carregar_credenciais(E.pasta_config)
+    config.salvar_credenciais({"grupos_pastas": mover_grupo(cred["grupos_pastas"], genero, str(c.get("pasta") or ""))}, E.pasta_config)
+    return r_grupos({})
 
 
 def r_abrir_pasta(_):
@@ -604,12 +625,12 @@ def r_cancelar(_):
 
 
 ROTAS_GET = {"/api/estado": r_estado, "/api/faixas": r_faixas, "/api/sem-genero": r_sem_genero,
-             "/api/config": r_config, "/api/propostas": r_propostas, "/api/precisao-som": r_precisao_som}
+             "/api/config": r_config, "/api/grupos": r_grupos, "/api/propostas": r_propostas, "/api/precisao-som": r_precisao_som}
 ROTAS_POST = {
     "/api/pasta": r_pasta, "/api/analisar": r_analisar, "/api/padroes": r_padroes, "/api/previa": r_previa,
     "/api/definir-genero": r_definir_genero, "/api/copiar": r_copiar, "/api/melhorar": r_melhorar, "/api/cancelar": r_cancelar,
     "/api/config": r_config_salvar, "/api/identificar": r_identificar, "/api/decidir": r_decidir,
-    "/api/desfazer": r_desfazer, "/api/pausar": r_pausar, "/api/abrir-pasta": r_abrir_pasta,
+    "/api/desfazer": r_desfazer, "/api/pausar": r_pausar, "/api/abrir-pasta": r_abrir_pasta, "/api/grupos-mover": r_grupos_mover,
 }
 
 

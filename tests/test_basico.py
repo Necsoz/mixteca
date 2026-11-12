@@ -78,6 +78,15 @@ def test_agrupar_generos_proximos_na_pasta_sem_mudar_a_tag():
     assert grupo("Tech House", meus) == "House" and grupo("Riddim", meus) == "Bass" and grupo("Trap", meus) == "Bass"
     assert grupo("Deathstep") == "Deathstep" and grupo("Tearout") == "Tearout" and grupo("Brostep") == "Dubstep"
     assert planejador.planejar([f], "D", agrupar_generos=True, grupos_proprios=meus)[0].destino.startswith("Bass/")
+    # mover pela tela: tira Electro House e Progressive House de House e junta com Big Room, ou cria pasta nova
+    from organizador.taxonomia import mover_grupo
+    txt = mover_grupo(mover_grupo("", "Electro House", "Big Room"), "Progressive House", "Big Room")
+    m = ler_grupos(txt)
+    assert grupo("Electro House", m) == "Big Room" and grupo("Progressive House", m) == "Big Room" and grupo("Tech House", m) == "House"
+    txt = mover_grupo(mover_grupo(txt, "Electro House", "Electro & Prog"), "Progressive House", "electro & prog")
+    m = ler_grupos(txt)
+    assert grupo("Electro House", m) == grupo("Progressive House", m) == "Electro & Prog" and txt.count("\n") == 0, txt
+    assert mover_grupo(mover_grupo(txt, "Electro House", ""), "Progressive House", "House") == ""   # voltar ao padrão limpa tudo
 
 
 def test_planejador_padroes():

@@ -151,6 +151,21 @@ def ler_grupos(texto: str) -> dict[str, str]:
     return saida
 
 
+def mover_grupo(texto: str, genero: str, pasta: str) -> str:
+    """Devolve o texto de grupos com `genero` movido para `pasta` ("" ou a pasta padrão dele = volta ao padrão)."""
+    k = chave(genero)
+    grupos: dict[str, list[str]] = {}
+    for linha in (texto or "").splitlines():
+        p, sep, generos = linha.partition(":") if ":" in linha else linha.partition("=")
+        if sep and p.strip():
+            grupos.setdefault(p.strip(), []).extend(g.strip() for g in re.split(r"[,;]", generos) if chave(g) and chave(g) != k)
+    pasta = re.sub(r"[:=,;\n\r]", " ", pasta or "").strip()[:60]
+    if pasta and chave(pasta) != chave(grupo(genero)):
+        alvo = next((p for p in grupos if chave(p) == chave(pasta)), pasta)
+        grupos.setdefault(alvo, []).append(genero.strip())
+    return "\n".join(f"{p}: {', '.join(gs)}" for p, gs in grupos.items() if gs)
+
+
 def grupo(genero: str, proprios: dict[str, str] | None = None) -> str:
     """Família do gênero (ex.: Riddim -> Dubstep, Tech House -> House). Sem família conhecida, devolve o próprio gênero.
     Os grupos escolhidos pelo usuário (`proprios`) valem antes dos padrões. Deathstep e Tearout ficam em pastas próprias."""

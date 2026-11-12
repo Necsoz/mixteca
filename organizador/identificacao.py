@@ -52,6 +52,16 @@ def pesquisar_online(faixa, cli, cred: dict, pasta_capas, so_capa: bool = False)
                     melhor, fontes = x, [mod.FONTE]
                 else:
                     fontes.append(mod.FONTE)
+    estilos_discogs = None
+    if melhor is None and cred.get("discogs") and art and tit and not so_capa:
+        # nenhuma outra fonte achou: o Discogs confirma que existe um lançamento desse artista com essa faixa
+        d = discogs.lancamento(cli, cred["discogs"], art, tit_busca)
+        if d:
+            estilos_discogs = d["estilos"]
+            melhor = {"fonte": "Discogs", "mbid": "", "titulo": tit_busca, "artista": art, "artista_mbid": "", "album": d["album"],
+                      "tipo": "", "ano": d["ano"], "duracao": 0.0, "release_id": "", "release_group_id": "", "generos": {},
+                      "_nota": {"score": 0.78, "nivel": "media", "titulo": 1.0, "artista": 1.0, "duracao_dif": None}}
+            fontes = ["Discogs"]
     if melhor is None:
         return {"cand": None, "consulta": {"artista": art, "titulo": tit, "origem": origem}}
 
@@ -66,7 +76,9 @@ def pesquisar_online(faixa, cli, cred: dict, pasta_capas, so_capa: bool = False)
         if cred.get("lastfm") and not so_capa:
             brutos["Last.fm"] = lastfm.tags(cli, cred["lastfm"], melhor["artista"], melhor["titulo"])
             fontes.append("Last.fm")
-        if cred.get("discogs") and not so_capa:
+        if estilos_discogs is not None:
+            brutos["Discogs"] = estilos_discogs
+        elif cred.get("discogs") and not so_capa:
             brutos["Discogs"] = discogs.estilos(cli, cred["discogs"], melhor["artista"], melhor["titulo"])
             fontes.append("Discogs")
         ids = (melhor.get("release_id", ""), melhor.get("release_group_id", ""))

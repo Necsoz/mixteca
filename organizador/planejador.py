@@ -82,6 +82,7 @@ def planejar(
     min_tom_conf: float = 0.01,
     incluir_incertas: bool = False,
     agrupar_generos: bool = False,
+    grupos_proprios: dict | None = None,
 ) -> list[ItemPlano]:
     _, partes = PADROES[padrao]
     usados: set[str] = set()
@@ -92,7 +93,7 @@ def planejar(
             pastas = ["Revisão", motivo]
         else:
             valores = {
-                "genero": limpar_nome(grupo_genero(f.genero) if agrupar_generos else f.genero) if f.genero else "",
+                "genero": limpar_nome(grupo_genero(f.genero, grupos_proprios) if agrupar_generos else f.genero) if f.genero else "",
                 "bpm": rotulo_bpm(f.bpm, bpm_modo, bpm_tam) if f.bpm is not None else "",
                 "camelot": rotulo_camelot(f.camelot),
             }

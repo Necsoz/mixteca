@@ -71,6 +71,13 @@ def test_agrupar_generos_proximos_na_pasta_sem_mudar_a_tag():
     assert planejador.planejar([f], "A")[0].destino.startswith("Riddim/")
     item = planejador.planejar([f], "A", agrupar_generos=True)[0]
     assert item.destino == "Dubstep/140 BPM/06A/B - A.mp3" and item.tags["genero"] == "Riddim"
+    # grupos escolhidos pelo usuário valem antes dos padrões; Deathstep e Tearout não entram em Dubstep
+    from organizador.taxonomia import ler_grupos
+    meus = ler_grupos("Electro & Progressive: Electro House, Progressive House\nlinha sem dois pontos\nBass = Riddim; Trap")
+    assert grupo("Electro House", meus) == "Electro & Progressive" and grupo("progressive house", meus) == "Electro & Progressive"
+    assert grupo("Tech House", meus) == "House" and grupo("Riddim", meus) == "Bass" and grupo("Trap", meus) == "Bass"
+    assert grupo("Deathstep") == "Deathstep" and grupo("Tearout") == "Tearout" and grupo("Brostep") == "Dubstep"
+    assert planejador.planejar([f], "D", agrupar_generos=True, grupos_proprios=meus)[0].destino.startswith("Bass/")
 
 
 def test_planejador_padroes():

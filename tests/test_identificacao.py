@@ -474,6 +474,26 @@ def test_texto_que_nao_e_do_nome_some_comparando_com_a_internet():
     assert g.genero == "Big Room" and g.ajustes["genero"] == "Big Room"
 
 
+def test_discogs_identifica_quando_o_musicbrainz_nao_acha():
+    t = Taxonomia({})
+
+    def transp(url, cab, tmo):
+        if "api.discogs.com" in url and "artist=Kura" in url and "track=TORA" in url:
+            return 200, json.dumps({"results": [{"title": "Kura - TORA", "year": "2015", "style": ["Big Room"], "genre": ["Electronic"]}]}).encode(), {}
+        if "musicbrainz.org" in url:
+            return 200, b'{"recordings": []}', {}
+        return 404, b"", {}
+
+    f = Faixa(caminho="/x/Kura - TORA (SITEQUALQUER).mp3", duracao=200.0)
+    online = identificacao.pesquisar_online(f, Cliente("", None, transp, dormir=lambda s: None), {"discogs": "TOKEN"}, _tmp() / "capas")
+    assert online["fontes"] == ["Discogs"] and online["nota"]["nivel"] == "media", online
+    campos = identificacao.montar_proposta(f, online, None, t)["campos"]
+    assert campos["genero"]["novo"] == "Big Room" and campos["genero"]["fonte"] == "Discogs" and campos["genero"]["nivel"] == "media", campos["genero"]
+    assert campos["titulo"]["novo"] == "TORA" and campos["artista"]["novo"] == "Kura" and campos["ano"]["novo"] == "2015"
+    # sem token, nada disso acontece
+    assert identificacao.pesquisar_online(f, Cliente("", None, transp, dormir=lambda s: None), {}, _tmp() / "capas")["cand"] is None
+
+
 def _esperar(E, limite=120):
     ini = time.time()
     while time.time() - ini < limite:

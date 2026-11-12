@@ -113,7 +113,7 @@ class Taxonomia:
 # Famílias de gêneros próximos (opção "agrupar gêneros próximos" na hora de montar as pastas). A ordem importa:
 # a primeira regra que casar decide. O gênero gravado na tag continua o específico; só a PASTA usa a família.
 _GRUPOS = [
-    ("Dubstep", r"dubstep|brostep|riddim|deathstep|tearout|chillstep|drumstep|\b140\b"),
+    ("Dubstep", r"dubstep|brostep|riddim|chillstep|drumstep|\b140\b"),
     ("Drum & Bass", r"drum and bass|drum n bass|\bdnb\b|\bd n b\b|jungle|neurofunk|liquid funk|jump up"),
     ("Hardstyle & Hardcore", r"hardstyle|rawstyle|hardcore|frenchcore|gabber|hard dance|uptempo"),
     ("Trance", r"trance|goa"),
@@ -136,9 +136,27 @@ _GRUPOS = [
 _GRUPOS = [(nome, re.compile(padrao)) for nome, padrao in _GRUPOS]
 
 
-def grupo(genero: str) -> str:
-    """Família do gênero (ex.: Riddim -> Dubstep, Tech House -> House). Sem família conhecida, devolve o próprio gênero."""
+def ler_grupos(texto: str) -> dict[str, str]:
+    """Grupos escolhidos pelo usuário, um por linha: "Nome da pasta: Gênero 1, Gênero 2". -> {chave do gênero: pasta}"""
+    saida: dict[str, str] = {}
+    for linha in (texto or "").splitlines():
+        pasta, sep, generos = linha.partition(":") if ":" in linha else linha.partition("=")
+        pasta = pasta.strip()
+        if not sep or not pasta:
+            continue
+        for g in re.split(r"[,;]", generos):
+            if chave(g):
+                saida[chave(g)] = pasta
+        saida.setdefault(chave(pasta), pasta)
+    return saida
+
+
+def grupo(genero: str, proprios: dict[str, str] | None = None) -> str:
+    """Família do gênero (ex.: Riddim -> Dubstep, Tech House -> House). Sem família conhecida, devolve o próprio gênero.
+    Os grupos escolhidos pelo usuário (`proprios`) valem antes dos padrões. Deathstep e Tearout ficam em pastas próprias."""
     k = chave(genero)
+    if proprios and k in proprios:
+        return proprios[k]
     if "hardcore" in k and ("punk" in k or "post" in k):
         return "Rock"
     for nome, rx in _GRUPOS:

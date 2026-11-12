@@ -17,7 +17,7 @@ MODELO_PREFERENCIAS = {
     "artistas_dica": [],     # [{"artistas": [...], "genero": "...", "anos": [2011, 2016], "converter": [...]}]
     "limpar_termos": [],     # nomes de sites/programas que aparecem nos títulos e devem ser tirados (ex.: "nomedosite")
 }
-CREDENCIAIS_PADRAO = {"contato": "", "acoustid": "", "lastfm": "", "discogs": "", "aplicar_alta_automatico": True, "procurar_capa_melhor": True}
+CREDENCIAIS_PADRAO = {"contato": "", "acoustid": "", "lastfm": "", "discogs": "", "grupos_pastas": "", "agrupar_generos": False, "aplicar_alta_automatico": True, "procurar_capa_melhor": True}
 _CHAVES_CRED = set(CREDENCIAIS_PADRAO)
 
 
@@ -60,7 +60,7 @@ def salvar_credenciais(novas: dict, pasta=None) -> dict:
     cred = carregar_credenciais(pasta)
     for k, v in novas.items():
         if k in _CHAVES_CRED:
-            cred[k] = bool(v) if k in ("aplicar_alta_automatico", "procurar_capa_melhor") else str(v).strip()
+            cred[k] = bool(v) if k in ("aplicar_alta_automatico", "procurar_capa_melhor", "agrupar_generos") else str(v).strip()
     arq = _pasta(pasta) / "credenciais.json"
     arq.write_text(json.dumps(cred, ensure_ascii=False, indent=2), encoding="utf-8")
     try:

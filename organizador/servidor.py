@@ -28,7 +28,7 @@ from .provedores import acoustid, capas
 from .rede import Cliente, ErroRede
 from .escrita import gravar as gravar_tags_copia
 from .store import Cache
-from .taxonomia import Taxonomia
+from .taxonomia import Taxonomia, ler_grupos
 
 WEB = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent.parent)) / "organizador" / "web"
 TOKEN = secrets.token_urlsafe(24)
@@ -108,6 +108,7 @@ def _parametros_plano(c: dict) -> dict:
         "bpm_tam": max(2, min(20, int(c.get("bpm_tam") or 5))),
         "incluir_incertas": bool(c.get("incluir_incertas")),
         "agrupar_generos": bool(c.get("agrupar_generos")),
+        "grupos_proprios": ler_grupos(config.carregar_credenciais(E.pasta_config)["grupos_pastas"]),
     }
 
 
@@ -347,7 +348,7 @@ def _treinar() -> dict:
 
 def r_config(c):
     cred = config.carregar_credenciais(E.pasta_config)
-    return {"contato": cred["contato"], "tem_acoustid": bool(cred["acoustid"]), "tem_lastfm": bool(cred["lastfm"]), "tem_discogs": bool(cred["discogs"]), "procurar_capa_melhor": cred["procurar_capa_melhor"],
+    return {"contato": cred["contato"], "tem_acoustid": bool(cred["acoustid"]), "tem_lastfm": bool(cred["lastfm"]), "tem_discogs": bool(cred["discogs"]), "grupos_pastas": cred["grupos_pastas"], "agrupar_generos": cred["agrupar_generos"], "procurar_capa_melhor": cred["procurar_capa_melhor"],
             "aplicar_alta_automatico": cred["aplicar_alta_automatico"], "fpcalc": acoustid.disponivel(),
             "pasta_dados": str(E.pasta_config or pasta_dados())}
 
@@ -357,9 +358,11 @@ def r_config_salvar(c):
     for k in ("contato", "acoustid", "lastfm", "discogs"):
         if k in c and (k == "contato" or c[k] != "__manter__"):
             novos[k] = c[k]
-    for k in ("aplicar_alta_automatico", "procurar_capa_melhor"):
+    for k in ("aplicar_alta_automatico", "procurar_capa_melhor", "agrupar_generos"):
         if k in c:
             novos[k] = bool(c[k])
+    if "grupos_pastas" in c:
+        novos["grupos_pastas"] = str(c["grupos_pastas"])[:4000]
     config.salvar_credenciais(novos, E.pasta_config)
     return r_config({})
 

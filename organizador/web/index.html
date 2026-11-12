@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Organizador Musical</title>
+<style>
+:root{--bg:#0d0f1f;--card:#161933;--card2:#1d2142;--txt:#eceeff;--mut:#9ba1cc;--acc:#3ee0c3;--acc2:#ff5c9d;--ok:#47d18c;--warn:#ffb84d;--bad:#ff6b6b;--bd:#2b3060}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(1200px 500px at 80% -10%,#2a1b55 0,transparent 60%),var(--bg);color:var(--txt);font:15px/1.5 "Segoe UI",system-ui,sans-serif;padding-bottom:90px}
+.wrap{max-width:1040px;margin:0 auto;padding:0 20px}
+header{padding:28px 0 8px}
+h1{margin:0;font-size:28px;letter-spacing:.3px}
+h1 span{background:linear-gradient(90deg,var(--acc),var(--acc2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{color:var(--mut);margin:4px 0 0}
+section{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:20px 22px;margin:18px 0}
+section.off{display:none}
+h2{margin:0 0 4px;font-size:18px}
+h2 .n{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#0d0f1f;font-size:14px;font-weight:700;margin-right:8px}
+.hint{color:var(--mut);margin:0 0 14px;font-size:14px}
+label.l{display:block;font-size:13px;color:var(--mut);margin:12px 0 4px}
+.row{display:flex;gap:8px}
+input[type=text],select{flex:1;background:var(--card2);border:1px solid var(--bd);color:var(--txt);border-radius:10px;padding:10px 12px;font:inherit;min-width:0}
+select{flex:none}
+input:focus,select:focus,button:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--bd);background:var(--card2);color:var(--txt);padding:10px 16px}
+button:hover{border-color:var(--acc)}
+button.go{background:linear-gradient(135deg,var(--acc),#32b8ff);color:#06231e;border:0;font-weight:700}
+button.go:disabled{opacity:.5;cursor:not-allowed}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 14px}
+.chip{background:var(--card2);border:1px solid var(--bd);border-radius:999px;padding:4px 12px;font-size:13px}
+.chip b{color:var(--acc)}
+.chip.w b{color:var(--warn)}
+.pads{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.pad{text-align:left;padding:14px;background:var(--card2);border:2px solid var(--bd);border-radius:14px;display:block;width:100%}
+.pad.sel{border-color:var(--acc);box-shadow:0 0 0 3px #3ee0c322}
+.pad strong{display:block;font-size:15px;margin-bottom:6px}
+.pad code{display:block;font:12px/1.5 Consolas,monospace;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pad small{color:var(--mut);display:block}
+.opts{display:flex;flex-wrap:wrap;gap:18px;align-items:center;margin:16px 0 4px}
+.opts label{display:flex;gap:8px;align-items:center;color:var(--mut)}
+.tree{background:var(--card2);border:1px solid var(--bd);border-radius:12px;padding:10px 14px;max-height:380px;overflow:auto;font-size:14px;margin-top:12px}
+.tree details{margin-left:16px}
+.tree>details{margin-left:0}
+.tree summary{cursor:pointer;padding:2px 0;list-style:none}
+.tree summary::before{content:"▸ ";color:var(--mut)}
+.tree details[open]>summary::before{content:"▾ "}
+.tree .q{color:var(--acc);font-size:12px;margin-left:6px}
+.tree .rev>summary{color:var(--warn)}
+.legend{color:var(--mut);font-size:13px;margin-top:8px}
+.ok{color:var(--ok)}.bad{color:var(--bad)}.warn{color:var(--warn)}
+.res{margin-top:14px;padding:12px 14px;border-radius:12px;background:var(--card2);border:1px solid var(--bd);display:none}
+.tw{max-height:420px;overflow:auto;border:1px solid var(--bd);border-radius:12px;margin-top:10px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{position:sticky;top:0;background:var(--card2);text-align:left;padding:8px 10px;cursor:pointer;white-space:nowrap;color:var(--mut);font-weight:600}
+td input[type=text]{width:100%;padding:6px 8px}
+td{padding:7px 10px;border-top:1px solid var(--bd);white-space:nowrap;max-width:340px;overflow:hidden;text-overflow:ellipsis}
+tr.m{cursor:pointer}
+tr.m:hover td{background:#ffffff08}
+tr.sel td{background:#3ee0c322}
+tr.comp td{background:#ff5c9d1f}
+.cam{display:inline-block;min-width:38px;text-align:center;border-radius:6px;padding:1px 6px;font-weight:700;color:#0d0f1f}
+.u{color:var(--warn)}
+#barra{position:fixed;left:0;right:0;bottom:0;background:#0b0d1ae6;backdrop-filter:blur(8px);border-top:1px solid var(--bd);padding:12px 20px;display:none}
+#barra .in{max-width:1040px;margin:0 auto;display:flex;gap:14px;align-items:center}
+.bar{flex:1;height:10px;border-radius:999px;background:var(--card2);overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--acc),var(--acc2));transition:width .3s}
+#btxt{font-size:13px;color:var(--mut);min-width:220px;max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.erro{color:var(--bad);margin-top:10px;display:none}
+.badge{display:inline-block;border-radius:6px;padding:0 7px;font-size:12px;font-weight:700;color:#0d0f1f}
+.b-alta{background:var(--ok)}.b-media{background:var(--warn)}.b-baixa{background:var(--bad)}
+.cfg{background:var(--card2);border:1px solid var(--bd);border-radius:12px;padding:6px 14px;margin:10px 0}
+.cfg summary{cursor:pointer;padding:6px 0;color:var(--mut)}
+.cfg .g{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}
+.prop{padding:10px 12px;border-top:1px solid var(--bd)}
+.prop:first-child{border-top:0}
+.prop .t{font-weight:600;margin-bottom:4px}
+.cam2{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:14px;padding:2px 0}
+.cam2 .k{min-width:96px;color:var(--mut)}
+.cam2 .ant{color:var(--mut);text-decoration:line-through}
+.cam2 img{width:44px;height:44px;border-radius:6px;object-fit:cover}
+.cam2 small{color:var(--mut)}
+button.mini{padding:2px 10px;font-size:13px}
+.fila{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+#fim{position:fixed;inset:0;background:#05061499;backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
+#fim .card{background:var(--card);border:1px solid var(--bd);border-radius:18px;max-width:720px;width:100%;max-height:90vh;overflow:auto;padding:24px 26px;box-shadow:0 20px 60px #000a}
+#fim h2{font-size:22px;margin-bottom:10px}
+#fim .grade{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}
+#fim .num{background:var(--card2);border:1px solid var(--bd);border-radius:12px;padding:10px 12px}
+#fim .num b{display:block;font-size:22px;color:var(--acc)}
+#fim .num.w b{color:var(--warn)}#fim .num.r b{color:var(--bad)}
+#fim ul{margin:6px 0 12px;padding-left:20px;color:var(--mut);font-size:14px}
+#fim .acoes{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+.revl{margin-top:10px;font-size:14px;color:var(--mut)}
+.revl b{color:var(--warn)}
+.revl li{margin:2px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Organizador <span>Musical</span></h1>
+  <p class="sub">Organize suas músicas em pastas por gênero, BPM e tom (Camelot) para achar o que combina na hora de tocar.</p>
+</header>
+
+<section id="s1">
+  <h2><span class="n">1</span>De onde e para onde</h2>
+  <p class="hint">O programa só <b>copia</b> arquivos. As músicas originais nunca são movidas, alteradas ou apagadas.</p>
+  <label class="l" for="origem">Pasta com as suas músicas (ex.: o cartão de memória)</label>
+  <div class="row"><input type="text" id="origem" placeholder="Ex.: E:\Music"><button id="b-origem">Escolher…</button></div>
+  <label class="l" for="destino">Pasta onde as músicas organizadas serão guardadas</label>
+  <div class="row"><input type="text" id="destino" placeholder="Ex.: D:\Músicas"><button id="b-destino">Escolher…</button></div>
+  <div class="row" style="margin-top:16px"><button class="go" id="b-analisar">Analisar músicas</button></div>
+  <p class="hint" style="margin-top:10px">A análise lê o BPM e o tom direto do áudio, sem tocar as músicas. Fica guardada, então da próxima vez é instantâneo.</p>
+  <div class="erro" id="erro"></div>
+</section>
+
+<section id="si" class="off">
+  <h2><span class="n">2</span>Informações da internet <small style="color:var(--mut);font-weight:400">(automático)</small></h2>
+  <p class="hint">Assim que a análise termina, o programa já <b>procura sozinho na internet</b> o que falta em cada música (<b>nome, artista, álbum, ano, gênero e capa</b>) e preenche o que tem certeza. Não precisa configurar nada. O gênero é decidido música por música e a sonoridade ajuda quando a internet não sabe. As músicas originais não são alteradas; dá para desfazer no passo 6.</p>
+  <div class="chips" id="chips-id"></div>
+  <div class="res" id="res-id"></div>
+  <div class="opts" style="margin-top:6px"><button id="b-identificar">Buscar de novo</button><small style="color:var(--mut)">Só precisa se a conexão caiu ou se você quiser tentar outra vez.</small></div>
+  <div id="rev" style="display:none">
+    <h2 style="margin-top:18px;font-size:16px">Sugestões que o programa não teve certeza <small style="color:var(--mut);font-weight:400">(opcional)</small></h2>
+    <div class="fila">
+      <select id="f-nivel"><option value="">Todas</option><option value="alta">Alta confiança</option><option value="media">Média confiança</option><option value="baixa">Baixa confiança</option></select>
+      <button id="b-ac-alta" class="mini">Aceitar todas de alta</button>
+      <button id="b-ac-media" class="mini">Aceitar todas de média</button>
+      <button id="b-rec-baixa" class="mini">Recusar todas de baixa</button>
+    </div>
+    <p class="hint">Se você não mexer aqui, nada disso é usado. Baixa confiança nunca é aplicada em lote. As informações são gravadas nas <b>cópias</b> no passo de copiar.</p>
+    <div class="tw" id="props"></div>
+  </div>
+  <details class="cfg" id="cfg" style="margin-top:12px"><summary>Avançado (opcional, não precisa mexer)</summary>
+    <div class="g">
+      <div><label class="l" for="c-acoustid">Chave AcoustID (reconhece pelo som)</label><input type="text" id="c-acoustid" placeholder="deixe vazio se não tiver"></div>
+      <div><label class="l" for="c-lastfm">Chave Last.fm (mais gêneros)</label><input type="text" id="c-lastfm" placeholder="deixe vazio se não tiver"></div>
+      <div><label class="l" for="c-discogs">Token Discogs (mais estilos)</label><input type="text" id="c-discogs" placeholder="deixe vazio se não tiver"></div>
+      <div><label class="l" for="c-contato">Seu e-mail (só se quiser; o programa já se identifica sozinho)</label><input type="text" id="c-contato" placeholder="deixe vazio"></div>
+    </div>
+    <div class="opts"><label><input type="checkbox" id="c-capa" checked> Procurar <b>capa melhor</b> (maior) para músicas que já têm capa pequena; só troca se a nova for bem maior</label></div>
+    <div class="opts"><label><input type="checkbox" id="c-auto" checked> Aplicar sozinho o que for de <b>alta e média confiança</b> e estava vazio</label><button id="b-cfg">Salvar</button></div>
+    <p class="hint" id="cfg-nota"></p>
+  </details>
+</section>
+
+<section id="s2" class="off">
+  <h2><span class="n">3</span>Como organizar</h2>
+  <div class="chips" id="chips"></div>
+  <p class="hint">Escolha um padrão. Os exemplos abaixo usam músicas suas.</p>
+  <div class="pads" id="pads"></div>
+  <div class="opts">
+    <label>BPM nas pastas:
+      <select id="bpm_modo"><option value="exato">Exato (128 BPM)</option><option value="faixas">Em faixas</option></select></label>
+    <label id="l-tam" style="display:none">Tamanho da faixa:
+      <select id="bpm_tam"><option>2</option><option>3</option><option selected>5</option><option>10</option></select></label>
+    <label><input type="checkbox" id="incertas"> Colocar também as incertas nas pastas (em vez de “Revisão”)</label>
+  </div>
+  <div class="tree" id="tree"></div>
+  <div class="revl" id="rev-lista"></div>
+  <p class="legend">As músicas que o programa não tem certeza (sem gênero, <b>BPM ou tom duvidoso</b>…) vão para a pasta <b class="warn">Revisão</b>, dentro de uma subpasta com o motivo, em vez de serem classificadas no chute. Marcando a opção acima, elas entram nas pastas normais. O tom é uma estimativa: em caso de dúvida, confira nas pastas que mais usa.</p>
+</section>
+
+<section id="s2b" class="off">
+  <h2>Gêneros que não consegui descobrir <small style="color:var(--mut);font-weight:400">(opcional)</small></h2>
+  <p class="hint"><b id="sg-n"></b> artistas ainda estão <b>sem gênero</b>, nem na internet nem pela sonoridade. Se quiser, escolha um gênero por artista (vale para todas as músicas dele); quem ficar sem gênero vai para a pasta <b class="warn">Revisão</b>. Seus arquivos não são alterados: o gênero fica guardado só no programa. Depois de aplicar, o BPM é recalculado já usando o gênero.</p>
+  <div class="row" style="margin-bottom:10px"><button id="b-usar-sug">Usar as sugestões</button><button class="go" id="b-aplicar-gen">Aplicar gêneros</button></div>
+  <div class="tw"><table><thead><tr><th>Artista</th><th>Músicas</th><th style="min-width:240px">Gênero</th></tr></thead><tbody id="sg-corpo"></tbody></table></div>
+  <datalist id="lista-generos"></datalist>
+</section>
+
+<section id="s3" class="off">
+  <h2><span class="n">4</span>Copiar para o destino</h2>
+  <p class="hint">Cria as pastas e <b>copia</b> as músicas. Se o arquivo já existir no destino, ele é pulado. Um registro do que foi feito fica salvo no destino.</p>
+  <div class="opts" style="margin-top:0"><label><input type="checkbox" id="gravar_tags" checked> Gravar nome, artista, álbum, gênero e capa encontrados <b>nas cópias</b> (as tags antigas ficam guardadas para desfazer)</label></div>
+  <button class="go" id="b-copiar">Copiar músicas</button>
+  <div class="res" id="res-copiar"></div>
+</section>
+
+<section id="s4" class="off">
+  <h2><span class="n">5</span>Melhorar o áudio <small style="color:var(--mut);font-weight:400">(opcional)</small></h2>
+  <p class="hint">Deixa o volume parecido entre as músicas, corta subgrave inaudível e segura picos que estouram. Gera <b>cópias novas</b> na pasta <b>Melhoradas</b> dentro do destino; as outras ficam como estão. Não recupera o que um MP3 de baixa qualidade já perdeu, e a cópia é um MP3 novo (alta qualidade). Leva cerca de 20 segundos por música.</p>
+  <div class="opts" style="margin-top:0">
+    <label>Quais:
+      <select id="escopo"><option value="estouram">Só as que estouram (pico acima de 0 dB)</option><option value="todas">Todas</option></select></label>
+    <label>Volume alvo:
+      <select id="alvo"><option value="-14">Suave (-14 LUFS)</option><option value="-10" selected>Padrão (-10 LUFS)</option><option value="-8">Forte (-8 LUFS)</option></select></label>
+  </div>
+  <button class="go" id="b-melhorar" style="margin-top:8px">Criar cópias melhoradas</button>
+  <div class="res" id="res-melhorar"></div>
+</section>
+
+<section id="s5" class="off">
+  <h2><span class="n">6</span>Sua biblioteca</h2>
+  <p class="hint">Clique numa música: as que combinam com ela (tom compatível e BPM parecido) ficam destacadas em rosa.</p>
+  <input type="text" id="busca" placeholder="Buscar por nome, artista ou gênero…">
+  <div class="tw"><table><thead><tr id="cab"></tr></thead><tbody id="corpo"></tbody></table></div>
+  <div class="fila"><button id="b-desfazer" class="mini" disabled>Desfazer o que o programa completou na música selecionada</button></div>
+  <p class="legend"><span class="u">~</span> BPM incerto · <span class="u">?</span> tom incerto · <span class="u">⚠</span> qualidade baixa (MP3 com agudos cortados)</p>
+</section>
+</div>
+
+<div id="fim"><div class="card" id="fim-card"></div></div>
+<div id="barra"><div class="in"><div class="bar"><i id="bi"></i></div><div id="btxt"></div><button id="b-pausar">Pausar</button><button id="b-cancelar">Cancelar</button></div></div>
+
+<script>
+const TOKEN="__TOKEN__";
+const $=s=>document.querySelector(s);
+let padrao="A", faixas=[], ordem={col:"arquivo",asc:true}, selecionada=null, timer=null, ultimoTipo=null;
+
+function esc(t){return String(t??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+async function api(rota,corpo){
+  const opt=corpo===undefined?{headers:{"X-Token":TOKEN}}:{method:"POST",headers:{"X-Token":TOKEN,"Content-Type":"application/json"},body:JSON.stringify(corpo)};
+  const r=await fetch(rota,opt); const j=await r.json();
+  if(!r.ok) throw new Error(j.erro||"Erro desconhecido"); return j;
+}
+function erro(m){const e=$("#erro");e.textContent=m;e.style.display=m?"block":"none";if(m)e.scrollIntoView({behavior:"smooth",block:"center"})}
+function lembrar(){try{localStorage.setItem("om",JSON.stringify({o:$("#origem").value,d:$("#destino").value}))}catch(e){}}
+function recordar(){try{const v=JSON.parse(localStorage.getItem("om")||"{}");$("#origem").value=v.o||"";$("#destino").value=v.d||""}catch(e){}}
+
+async function escolher(campo,titulo){
+  try{const r=await api("/api/pasta",{titulo});
+    if(r.caminho){$(campo).value=r.caminho;lembrar()}
+    else if(!r.dialogo) alert("Neste computador, cole o caminho da pasta no campo.");
+  }catch(e){erro(e.message)}
+}
+const params=()=>({padrao,bpm_modo:$("#bpm_modo").value,bpm_tam:+$("#bpm_tam").value,incluir_incertas:$("#incertas").checked,destino:$("#destino").value,gravar_tags:$("#gravar_tags").checked});
+
+/* ---------- tarefas em segundo plano ---------- */
+function acompanhar(){clearInterval(timer);timer=setInterval(checar,700);checar()}
+async function checar(){
+  try{
+    const {job}=await api("/api/estado"); const b=$("#barra");
+    if(job.fase==="rodando"){
+      b.style.display="block"; ultimoTipo=job.tipo;
+      const p=job.total?Math.round(100*job.feitos/job.total):0; $("#bi").style.width=p+"%";
+      const nome={analisar:"Analisando e buscando na internet",copiar:"Copiando",melhorar:"Melhorando",reanalisar:"Recalculando",identificar:"Identificando"}[job.tipo]||"Trabalhando";
+      $("#b-pausar").style.display=(job.tipo==="identificar"||job.tipo==="analisar")?"":"none"; $("#b-pausar").textContent=job.pausado?"Continuar":"Pausar";
+      $("#btxt").textContent=`${job.pausado?"Em pausa · ":""}${nome}: ${job.feitos}/${job.total}${job.atual?" · "+job.atual:""}`; return;
+    }
+    clearInterval(timer); b.style.display="none";
+    if(job.fase==="erro") return erro(job.erro);
+    if(job.fase==="cancelado") return erro("Cancelado.");
+    if(job.fase==="concluido") await terminou(job);
+  }catch(e){clearInterval(timer);erro(e.message)}
+}
+async function terminou(job){
+  const r=job.resultado||{};
+  if(job.tipo==="analisar"||job.tipo==="reanalisar"){await carregar(job.tipo==="analisar"); if(job.tipo==="analisar"&&r.ident) mostrarResultado(r.ident,r.ident_aviso); else if(job.tipo==="analisar"&&r.ident_aviso) mostrarResultado(null,r.ident_aviso); return}
+  if(job.tipo==="identificar") return identificou(r);
+  const alvo=job.tipo==="copiar"?"#res-copiar":"#res-melhorar"; const el=$(alvo); el.style.display="block";
+  if(job.tipo==="copiar"){ el.innerHTML=`<b class="ok">✔ Pronto.</b> ${r.copiados} copiadas, ${r.ignorados} já existiam, <span class="${r.erros?"bad":""}">${r.erros} com erro</span>.<br><small>Registro: ${esc(r.log)}</small> <button class="mini" id="b-ver-fim">Ver resumo</button>`; $("#b-ver-fim").onclick=()=>mostrarFim(r); mostrarFim(r); }
+  else el.innerHTML=`<b class="ok">✔ Pronto.</b> ${r.melhoradas} cópias melhoradas, ${r.ja_bom} já estavam boas, <span class="${r.erros?"bad":""}">${r.erros} com erro</span>.<br><small>Pasta: ${esc(r.pasta)}</small>${(r.mensagens||[]).map(m=>`<br><small class="bad">${esc(m)}</small>`).join("")}`;
+}
+
+/* ---------- tela final de confirmação da cópia ---------- */
+function mostrarFim(r){
+  const ok=!r.erros&&!r.ausentes&&!r.originais_alterados&&!r.cancelado;
+  const num=(n,t,cl="")=>`<div class="num ${cl}"><b>${n}</b>${t}</div>`;
+  const lista=(tit,itens)=>itens.length?`<p style="margin:12px 0 2px"><b>${tit}</b></p><ul>${itens.join("")}</ul>`:"";
+  const rev=(r.revisao||[]);
+  $("#fim-card").innerHTML=`<h2>${r.cancelado?'<span class="warn">Cópia cancelada</span>':ok?'<span class="ok">✔ Cópia concluída e conferida</span>':'<span class="warn">Cópia concluída, com avisos</span>'}</h2>`+
+    `<div class="hint">Pasta: <b>${esc(r.pasta_destino)}</b></div>`+
+    `<div class="grade">${num(r.copiados,"músicas copiadas")}${num(r.ignorados,"já existiam (puladas)")}${num(r.tags_gravadas,"com nome e tags organizados")}${num(r.capas_trocadas,"capas colocadas/melhoradas")}`+
+    `${num(r.revisao_total,"na pasta Revisão",r.revisao_total?"w":"")}${num(r.erros,"com erro",r.erros?"r":"")}</div>`+
+    `<p class="hint">Conferência: ${r.ausentes?`<span class="bad">${r.ausentes} arquivo(s) não foram encontrados no destino.</span>`:'<span class="ok">todos os arquivos estão no destino.</span>'} `+
+    `${r.originais_alterados?`<span class="bad">${r.originais_alterados} original(is) mudaram durante a cópia!</span>`:'<span class="ok">Os originais não foram alterados.</span>'}`+
+    `${r.tags_falhas?` <span class="warn">${r.tags_falhas} cópia(s) ficaram com as tags antigas (a música está inteira).</span>`:""}</p>`+
+    lista("Pastas criadas (primeiro nível):",(r.primeiro_nivel||[]).map(p=>`<li>${esc(p.nome)} — ${p.qtd}</li>`))+
+    lista(`Músicas na Revisão e o motivo${r.revisao_total>rev.length?` (mostrando ${rev.length} de ${r.revisao_total})`:""}:`,rev.slice(0,30).map(x=>`<li>${esc(x.arquivo)} — <b class="warn">${esc(x.motivo)}</b></li>`).concat(rev.length>30?[`<li>… e mais ${rev.length-30}</li>`]:[]))+
+    lista("Erros:",(r.erros_detalhe||[]).slice(0,10).map(x=>`<li>${esc(x.arquivo)} — ${esc(x.detalhe)}</li>`))+
+    `<p class="hint">Registro do que foi feito (permite restaurar tags): ${esc(r.log)}</p>`+
+    `<div class="acoes"><button class="go" id="fim-abrir">Abrir a pasta</button><button id="fim-fechar">Fechar</button></div>`;
+  $("#fim").style.display="flex";
+  $("#fim-fechar").onclick=()=>{$("#fim").style.display="none"};
+  $("#fim-abrir").onclick=async()=>{try{const x=await api("/api/abrir-pasta",{});if(!x.ok)alert("Abra esta pasta no seu computador:\n"+x.caminho)}catch(e){erro(e.message)}};
+}
+
+/* ---------- passo 1 → análise ---------- */
+async function analisar(){
+  erro(""); lembrar();
+  try{await api("/api/analisar",{origem:$("#origem").value}); acompanhar()}catch(e){erro(e.message)}
+}
+async function carregar(rolar=true){
+  faixas=(await api("/api/faixas")).faixas;
+  ["#si","#s2","#s3","#s4","#s5"].forEach(s=>$(s).classList.remove("off"));
+  const bons=faixas.filter(f=>!f.erro), baixas=bons.filter(f=>f.baixa).length, erros=faixas.length-bons.length;
+  $("#chips").innerHTML=`<span class="chip"><b>${faixas.length}</b> músicas</span><span class="chip"><b>${new Set(bons.map(f=>f.genero).filter(Boolean)).size}</b> gêneros</span>`+
+    `<span class="chip ${baixas?"w":""}"><b>${baixas}</b> com qualidade baixa</span>`+(erros?`<span class="chip w"><b>${erros}</b> com erro de leitura</span>`:"");
+  await atualizarPadroes(); await atualizarPrevia(); desenharTabela(); await carregarSemGenero(); await carregarConfig(); await carregarPropostas();
+  const falt=faixas.filter(f=>!f.erro&&(!f.titulo||!f.artista||!f.album||!f.genero||!f.tem_capa)).length;
+  $("#chips-id").innerHTML=`<span class="chip ${falt?"w":""}"><b>${falt}</b> músicas com informação faltando</span>`;
+  if(rolar)$("#si").scrollIntoView({behavior:"smooth"});
+}
+
+/* ---------- passo 2: padrões e prévia ---------- */
+async function atualizarPadroes(){
+  const {padroes}=await api("/api/padroes",params());
+  $("#pads").innerHTML=padroes.map(p=>`<button class="pad ${p.id===padrao?"sel":""}" data-id="${p.id}"><strong>${esc(p.nome)}</strong>`+
+    (p.exemplos.length?p.exemplos.map(x=>`<code title="${esc(x)}">${esc(x)}</code>`).join(""):"<small>Sem exemplos ainda</small>")+`<small>${p.pastas} pastas</small></button>`).join("");
+  document.querySelectorAll(".pad").forEach(b=>b.onclick=()=>{padrao=b.dataset.id;atualizarPadroes();atualizarPrevia()});
+}
+function natural(a,b){return a.localeCompare(b,"pt",{numeric:true})}
+async function atualizarPrevia(){
+  const r=await api("/api/previa",params()); const raiz={filhos:{},qtd:0};
+  for(const n of r.arvore){let no=raiz;for(const p of n.caminho.split("/")){no.filhos[p]=no.filhos[p]||{filhos:{},qtd:0};no=no.filhos[p]}no.qtd=n.qtd}
+  const html=(filhos,nivel)=>Object.keys(filhos).sort((a,b)=>a==="Revisão"?1:b==="Revisão"?-1:natural(a,b)).map(nome=>{
+    const f=filhos[nome]; const abre=nivel===0&&nome!=="Revisão"?"":"";
+    return `<details class="${nome==="Revisão"&&nivel===0?"rev":""}" ${abre}><summary>${esc(nome)}<span class="q">${f.qtd}</span></summary>${html(f.filhos,nivel+1)}</details>`}).join("");
+  $("#tree").innerHTML=`<div style="color:var(--mut);margin-bottom:6px">Músicas/ — <b>${r.total}</b> arquivos</div>`+html(raiz.filhos,0);
+  const it=r.revisao_itens||[];
+  $("#rev-lista").innerHTML=it.length?`<b>${r.total?Object.values(r.revisao).reduce((a,b)=>a+b,0):0} música(s) vão para a pasta Revisão</b>, e o motivo de cada uma:<ul>`+
+    it.slice(0,40).map(x=>`<li>${esc(x.arquivo)} — <b>${esc(x.motivo)}</b></li>`).join("")+(it.length>40?`<li>… e mais ${it.length-40}</li>`:"")+"</ul>":"";
+}
+async function mudouOpcao(){$("#l-tam").style.display=$("#bpm_modo").value==="faixas"?"":"none";await atualizarPadroes();await atualizarPrevia()}
+
+/* ---------- passos 3 e 4 ---------- */
+async function copiar(){
+  erro(""); lembrar(); $("#res-copiar").style.display="none";
+  try{
+    const {total}=await api("/api/previa",params());
+    if(!confirm(`Copiar ${total} músicas para:\n${$("#destino").value}\n\nOs arquivos originais não serão alterados.`)) return;
+    await api("/api/copiar",params()); acompanhar();
+  }catch(e){erro(e.message)}
+}
+async function melhorar(){
+  erro(""); lembrar(); $("#res-melhorar").style.display="none";
+  try{
+    if(!confirm("Criar cópias melhoradas na pasta “Melhoradas” do destino?\nAs músicas originais não serão alteradas.")) return;
+    await api("/api/melhorar",{...params(),escopo:$("#escopo").value,alvo_lufs:+$("#alvo").value}); acompanhar();
+  }catch(e){erro(e.message)}
+}
+
+/* ---------- passo 5: biblioteca ---------- */
+const COLS=[["arquivo","Música"],["album","Álbum"],["genero","Gênero"],["bpm","BPM"],["camelot","Camelot"],["baixa","Qualidade"]];
+function corCam(c){return c?`hsl(${((parseInt(c)-1)*30)} 75% 62%)`:"#555"}
+function compat(a,b){
+  if(!a||!b||!a.camelot||!b.camelot||a===b) return false;
+  const na=parseInt(a.camelot),nb=parseInt(b.camelot),la=a.camelot.slice(-1),lb=b.camelot.slice(-1);
+  const d=Math.min((na-nb+12)%12,(nb-na+12)%12);
+  const tomOk=(la===lb&&d<=1)||(la!==lb&&d===0);
+  const bpmOk=a.bpm&&b.bpm&&Math.abs(a.bpm-b.bpm)/a.bpm<=0.04;
+  return tomOk&&bpmOk;
+}
+function desenharTabela(){
+  $("#cab").innerHTML=COLS.map(([k,n])=>`<th data-k="${k}">${n}${ordem.col===k?(ordem.asc?" ▲":" ▼"):""}</th>`).join("");
+  document.querySelectorAll("#cab th").forEach(th=>th.onclick=()=>{ordem.asc=ordem.col===th.dataset.k?!ordem.asc:true;ordem.col=th.dataset.k;desenharTabela()});
+  const q=$("#busca").value.toLowerCase().trim();
+  let lista=faixas.filter(f=>!q||(f.arquivo+" "+f.titulo+" "+f.artista+" "+f.genero).toLowerCase().includes(q));
+  lista.sort((a,b)=>{const x=a[ordem.col]??"",y=b[ordem.col]??"";const r=typeof x==="number"&&typeof y==="number"?x-y:String(x).localeCompare(String(y),"pt",{numeric:true});return ordem.asc?r:-r});
+  $("#corpo").innerHTML=lista.slice(0,600).map(f=>{
+    const i=faixas.indexOf(f), nome=(f.artista&&f.titulo)?`${f.artista} — ${f.titulo}`:f.arquivo;
+    const bpm=f.erro?"":`${(f.bpm_conf<3||f.fora)?'<span class="u">~</span>':""}${f.bpm}`;
+    const cam=f.erro?`<span class="bad" title="${esc(f.erro)}">erro</span>`:`<span class="cam" style="background:${corCam(f.camelot)}" title="${esc(f.tom)}">${f.camelot}</span>${f.tom_conf<0.01?'<span class="u" title="tom incerto"> ?</span>':""}`;
+    const cl=i===selecionada?"sel":compat(faixas[selecionada],f)?"comp":"";
+    return `<tr class="m ${cl}" data-i="${i}"><td title="${esc(f.caminho)}">${esc(nome)}</td><td>${esc(f.album||"—")}</td><td title="${esc(f.genero_fonte||"")}">${esc(f.genero||"—")}${f.genero_manual?' <span class="u" title="definido por você">✎</span>':""}${f.ajustes&&f.ajustes.length?' <span class="u" title="completado pelo programa: '+esc(f.ajustes.join(", "))+'">✎</span>':""}</td><td>${bpm}</td><td>${cam}</td><td>${f.baixa?'<span class="u" title="Agudos cortados em '+Math.round((f.corte_hz||0)/1000)+' kHz">⚠ baixa</span>':'<span class="ok">ok</span>'}</td></tr>`}).join("")+
+    (lista.length>600?`<tr><td colspan="6" class="hint">Mostrando 600 de ${lista.length}. Use a busca para filtrar.</td></tr>`:"");
+  document.querySelectorAll("#corpo tr.m").forEach(tr=>tr.onclick=()=>{const i=+tr.dataset.i;selecionada=selecionada===i?null:i;desenharTabela()});
+  const sf=faixas[selecionada]; $("#b-desfazer").disabled=!(sf&&sf.ajustes&&sf.ajustes.length);
+}
+
+/* ---------- completar gêneros ---------- */
+let semGenero=[];
+async function carregarSemGenero(){
+  const r=await api("/api/sem-genero"); semGenero=r.grupos;
+  $("#s2b").classList.toggle("off",!semGenero.length); $("#sg-n").textContent=semGenero.length;
+  $("#lista-generos").innerHTML=r.generos.map(g=>`<option value="${esc(g)}">`).join("");
+  $("#sg-corpo").innerHTML=semGenero.slice(0,300).map((g,i)=>`<tr><td title="${esc(g.exemplos.join(" · "))}">${esc(g.artista)}</td><td>${g.qtd}</td><td><input type="text" list="lista-generos" data-i="${i}" value="${esc(g.atual)}" placeholder="${g.sugestao?"sugestão: "+esc(g.sugestao):"ex.: Big Room"}"></td></tr>`).join("")+
+    (semGenero.length>300?`<tr><td colspan="3" class="hint">Mostrando 300 de ${semGenero.length} artistas (os com mais músicas).</td></tr>`:"");
+}
+function usarSugestoes(){document.querySelectorAll("#sg-corpo input").forEach(inp=>{const g=semGenero[+inp.dataset.i];if(!inp.value&&g.sugestao)inp.value=g.sugestao})}
+async function aplicarGeneros(){
+  erro("");
+  const defs=[...document.querySelectorAll("#sg-corpo input")].map(i=>({g:semGenero[+i.dataset.i],v:i.value.trim()})).filter(x=>x.v!==x.g.atual).map(x=>({chave:x.g.chave,genero:x.v}));
+  if(!defs.length) return erro("Nenhum gênero novo para aplicar.");
+  try{await api("/api/definir-genero",{definicoes:defs});acompanhar()}catch(e){erro(e.message)}
+}
+
+/* ---------- identificação na internet ---------- */
+const ROT={titulo:"Nome",artista:"Artista",album:"Álbum/Single",ano:"Ano",genero:"Gênero",capa:"Capa"};
+let propostas=[];
+async function carregarConfig(){
+  const c=await api("/api/config");
+  $("#c-contato").value=c.contato||""; $("#c-acoustid").value=""; $("#c-lastfm").value=""; $("#c-discogs").value=""; $("#c-capa").checked=c.procurar_capa_melhor!==false;
+  $("#c-discogs").placeholder=c.tem_discogs?"(token guardado)":"deixe vazio se não tiver";
+  $("#c-acoustid").placeholder=c.tem_acoustid?"(chave guardada)":"deixe vazio se não tiver";
+  $("#c-lastfm").placeholder=c.tem_lastfm?"(chave guardada)":"deixe vazio se não tiver";
+  $("#c-auto").checked=c.aplicar_alta_automatico;
+  $("#cfg-nota").innerHTML="As chaves ficam só neste computador ("+esc(c.pasta_dados)+") e nunca vão para o GitHub."+(c.fpcalc?"":" A chave AcoustID só funciona com o programa fpcalc, que não está instalado.");
+}
+async function salvarConfig(){
+  erro("");
+  try{
+    await api("/api/config",{contato:$("#c-contato").value,acoustid:$("#c-acoustid").value||"__manter__",lastfm:$("#c-lastfm").value||"__manter__",discogs:$("#c-discogs").value||"__manter__",procurar_capa_melhor:$("#c-capa").checked,aplicar_alta_automatico:$("#c-auto").checked});
+    await carregarConfig(); $("#cfg-nota").innerHTML+=" <b class='ok'>Salvo.</b>";
+  }catch(e){erro(e.message)}
+}
+async function identificar(internet){
+  erro(""); $("#res-id").style.display="none";
+  try{await api("/api/identificar",{internet,escopo:"faltando"});acompanhar()}catch(e){erro(e.message)}
+}
+function mostrarResultado(r,aviso){
+  const el=$("#res-id"); el.style.display="block";
+  const av=aviso?`<span class="warn">${esc(aviso)}</span><br>`:"";
+  if(!r){el.innerHTML=av;return}
+  const at=r.autoteste&&r.autoteste.acuracia!=null?`<br><small>Sonoridade: acertou ${Math.round(100*r.autoteste.acuracia)}% ao tentar adivinhar o gênero de ${r.autoteste.n} músicas suas que já tinham gênero.</small>`:"";
+  const conf=r.media+r.baixa+r.alta_pendente;
+  el.innerHTML=av+`<b class="ok">✔ Pronto.</b> Pesquisei ${r.pesquisadas} músicas${r.ja_pesquisadas?` (${r.ja_pesquisadas} já estavam guardadas)`:""} e preenchi sozinho <b>${r.aplicadas_auto}</b> informações. `+
+    (conf?`${conf} sugestões ficaram para você conferir (opcional). `:"")+`${r.sem_resultado} músicas sem resultado confiável.`+
+    (r.falhas_rede?`<br><span class="warn">${r.falhas_rede} consultas falharam por problema de conexão; clique em Buscar de novo para tentar só essas.</span>`:"")+
+    (r.extra_indisponivel?`<br><span class="warn">A fonte extra “${esc(r.extra_indisponivel)}” não respondeu e foi deixada de lado; usei as outras fontes.</span>`:"")+
+    (r.aviso_som?`<br><small>${esc(r.aviso_som)}</small>`:"")+at;
+}
+async function identificou(r){ mostrarResultado(r); await carregar(false); }
+async function carregarPropostas(){
+  const r=await api("/api/propostas"); propostas=r.propostas; desenharPropostas();
+}
+function desenharPropostas(){
+  const nv=$("#f-nivel").value;
+  $("#rev").style.display=propostas.length?"block":"none";
+  const lista=propostas.filter(p=>!nv||Object.values(p.campos).some(c=>c.nivel===nv));
+  $("#props").innerHTML=lista.slice(0,200).map((p,i)=>{
+    const campos=Object.entries(p.campos).filter(([k,c])=>!nv||c.nivel===nv).map(([k,c])=>{
+      const novo=k==="capa"?`<img src="/api/capa?t=${TOKEN}&arq=${encodeURIComponent(c.novo.split(/[\\/]/).pop())}" alt="capa">`:`<b>${esc(c.novo)}</b>`;
+      return `<div class="cam2"><span class="k">${ROT[k]||k}</span>${c.atual?`<span class="ant">${esc(c.atual)}</span> →`:""}${novo}`+
+        `<span class="badge b-${c.nivel}">${c.nivel}</span><small>${esc(c.fonte)}${c.nota?" · "+esc(c.nota):""}</small>`+
+        `<button class="mini" data-a="aceitar" data-c="${p.caminho.replace(/"/g,"&quot;")}" data-k="${k}">✓</button><button class="mini" data-a="recusar" data-c="${p.caminho.replace(/"/g,"&quot;")}" data-k="${k}">✗</button></div>`}).join("");
+    const id=p.identificacao||{};
+    return `<div class="prop"><div class="t" title="${esc(p.caminho)}">${esc(p.artista&&p.titulo?p.artista+" — "+p.titulo:p.arquivo)}</div>`+
+      (id.encontrado?`<small style="color:var(--mut)">Encontrado: ${esc(id.encontrado)}${id.tipo?" ("+esc(id.tipo)+")":""} · fontes: ${esc((id.fontes||[]).join(", ")||"sonoridade")}</small>`:`<small style="color:var(--mut)">Não identificada na internet${id.consulta&&id.consulta.titulo?" (procurei: "+esc((id.consulta.artista?id.consulta.artista+" - ":"")+id.consulta.titulo)+")":""}.</small>`)+
+      campos+(p.faltando&&p.faltando.length?`<small class="warn">Continua faltando: ${esc(p.faltando.join(", "))}</small>`:"")+`</div>`}).join("")+
+    (lista.length>200?`<div class="prop hint">Mostrando 200 de ${lista.length}. Resolva estas para ver as próximas.</div>`:"");
+  document.querySelectorAll("#props button[data-a]").forEach(b=>b.onclick=()=>decidir({acao:b.dataset.a,caminhos:[b.dataset.c],campos:[b.dataset.k]}));
+}
+async function decidir(corpo){
+  erro("");
+  try{await api("/api/decidir",corpo); await carregar(false); acompanharSePreciso()}catch(e){erro(e.message)}
+}
+async function acompanharSePreciso(){const {job}=await api("/api/estado");if(job.fase==="rodando")acompanhar()}
+async function pausar(){const {job}=await api("/api/estado");await api("/api/pausar",{pausar:!job.pausado});checar()}
+
+$("#b-origem").onclick=()=>escolher("#origem","Pasta com as músicas");
+$("#b-destino").onclick=()=>escolher("#destino","Pasta de destino");
+$("#b-analisar").onclick=analisar; $("#b-copiar").onclick=copiar; $("#b-melhorar").onclick=melhorar;
+$("#b-cancelar").onclick=()=>api("/api/cancelar",{}).then(checar); $("#b-pausar").onclick=pausar;
+$("#b-desfazer").onclick=async()=>{const f=faixas[selecionada];if(!f)return;await api("/api/desfazer",{caminhos:[f.caminho]});await carregar(false)};
+$("#b-cfg").onclick=salvarConfig; $("#b-identificar").onclick=()=>identificar(true); $("#f-nivel").onchange=desenharPropostas;
+$("#b-ac-alta").onclick=()=>decidir({acao:"aceitar",nivel:"alta"}); $("#b-ac-media").onclick=()=>decidir({acao:"aceitar",nivel:"media"}); $("#b-rec-baixa").onclick=()=>decidir({acao:"recusar",nivel:"baixa"});
+$("#bpm_modo").onchange=mudouOpcao; $("#bpm_tam").onchange=mudouOpcao; $("#incertas").onchange=mudouOpcao;
+$("#busca").oninput=desenharTabela; $("#b-usar-sug").onclick=usarSugestoes; $("#b-aplicar-gen").onclick=aplicarGeneros;
+recordar();
+api("/api/estado").then(e=>{if(e.job.fase==="rodando")acompanhar();else if(e.n_faixas){$("#origem").value=e.origem||$("#origem").value;carregar()}}).catch(()=>{});
+</script>
+</body>
+</html>

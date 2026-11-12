@@ -1,0 +1,206 @@
+"""Planeja a estrutura de pastas (prévia) e copia os arquivos com segurança.
+
+Regras de segurança: só COPIA (nunca move nem apaga), confere o tamanho depois de copiar,
+nunca sobrescreve um arquivo diferente e grava um log de tudo que fez.
+"""
+import json
+import re
+import shutil
+import time
+from dataclasses import dataclass
+from pathlib import Path
+
+from . import escrita
+from .limpeza import nome_de_arquivo
+from .modelos import Faixa
+
+PADROES = {
+    "A": ("Gênero → BPM → Camelot", ["genero", "bpm", "camelot"]),
+    "B": ("BPM → Gênero → Camelot", ["bpm", "genero", "camelot"]),
+    "C": ("Gênero → Camelot → BPM", ["genero", "camelot", "bpm"]),
+    "D": ("Gênero → BPM", ["genero", "bpm"]),
+}
+
+_INVALIDOS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
+
+
+def limpar_nome(texto: str) -> str:
+    limpo = _INVALIDOS.sub("_", texto).strip().rstrip(". ")
+    return limpo or "_"
+
+
+def rotulo_bpm(bpm: float, modo: str = "exato", tamanho: int = 5) -> str:
+    b = int(round(bpm))
+    if modo == "faixas" and tamanho > 1:
+        inicio = (b // tamanho) * tamanho
+        return f"{inicio}-{inicio + tamanho - 1} BPM"
+    return f"{b} BPM"
+
+
+def rotulo_camelot(codigo: str) -> str:
+    """"8A" -> "08A": com zero à esquerda, qualquer programa ordena na sequência da roda (01A, 01B, 02A, 02B...),
+    deixando as tonalidades que combinam (mesmo número, ±1 e A/B) a no máximo 2 pastas de distância."""
+    return f"{int(codigo[:-1]):02d}{codigo[-1]}" if codigo and codigo[:-1].isdigit() else (codigo or "")
+
+
+@dataclass
+class ItemPlano:
+    origem: str
+    destino: str  # caminho relativo à pasta de destino, com "/"
+    revisao: str | None = None
+    tags: dict | None = None   # metadados finais (limpos), gravados só na CÓPIA
+    capa: str | None = None
+    limpar: bool = False       # refaz as tags da cópia só com o que é útil (mp3, flac, m4a)
+    ajustou: bool = False      # o usuário/internet mudou algo desta música (grava mesmo em formatos sem limpeza)
+    nome: str = ""             # nome de exibição (Artista - Título)
+
+
+def _motivo_revisao(f: Faixa, partes: list[str], min_bpm_conf: float, min_tom_conf: float, incluir_incertas: bool):
+    if f.erro:
+        return "Arquivo com erro"
+    if "genero" in partes and not f.genero:
+        return "Sem gênero"
+    if "bpm" in partes and f.bpm is None:
+        return "BPM não detectado"
+    if "camelot" in partes and f.camelot is None:
+        return "Tom não detectado"
+    if not incluir_incertas:
+        if "bpm" in partes and f.bpm_conf < min_bpm_conf:
+            return "BPM incerto"
+        if "camelot" in partes and f.tom_conf < min_tom_conf:
+            return "Tom incerto"
+    return None
+
+
+def planejar(
+    faixas: list[Faixa],
+    padrao: str = "A",
+    bpm_modo: str = "exato",
+    bpm_tam: int = 5,
+    min_bpm_conf: float = 3.0,
+    min_tom_conf: float = 0.01,
+    incluir_incertas: bool = False,
+) -> list[ItemPlano]:
+    _, partes = PADROES[padrao]
+    usados: set[str] = set()
+    plano: list[ItemPlano] = []
+    for f in sorted(faixas, key=lambda x: x.caminho.lower()):
+        motivo = _motivo_revisao(f, partes, min_bpm_conf, min_tom_conf, incluir_incertas)
+        if motivo:
+            pastas = ["Revisão", motivo]
+        else:
+            valores = {
+                "genero": limpar_nome(f.genero) if f.genero else "",
+                "bpm": rotulo_bpm(f.bpm, bpm_modo, bpm_tam) if f.bpm is not None else "",
+                "camelot": rotulo_camelot(f.camelot),
+            }
+            pastas = [valores[p] for p in partes]
+        ext = Path(f.caminho).suffix.lower()
+        base_nome = limpar_nome(nome_de_arquivo(f.titulo, f.artista, Path(f.caminho).stem))
+        nome = base_nome + ext
+        destino = "/".join(pastas + [nome])
+        base = Path(nome)
+        n = 2
+        while destino.lower() in usados:
+            destino = "/".join(pastas + [f"{base.stem} ({n}){base.suffix}"])
+            n += 1
+        usados.add(destino.lower())
+        aj = f.ajustes or {}
+        tags = {"titulo": f.titulo, "artista": f.artista, "album": f.album, "genero": f.genero, "ano": f.ano}
+        if f.bpm is not None and f.bpm_conf >= min_bpm_conf:
+            tags["bpm"] = int(f.bpm)
+        if f.camelot and f.tom_conf >= min_tom_conf:
+            tags["camelot"] = f.camelot
+        plano.append(ItemPlano(origem=f.caminho, destino=destino, revisao=motivo,
+                               tags={k: v for k, v in tags.items() if v not in ("", None)} or None, capa=aj.get("capa_arquivo"),
+                               limpar=ext in escrita.FORMATOS_LIMPEZA, ajustou=bool(aj), nome=base_nome))
+    return plano
+
+
+def arvore(plano: list[ItemPlano]) -> list[dict]:
+    """Resumo da prévia: cada pasta com a quantidade de músicas dentro (inclui subpastas)."""
+    contagem: dict[tuple, int] = {}
+    for item in plano:
+        partes = tuple(item.destino.split("/")[:-1])
+        for i in range(1, len(partes) + 1):
+            contagem[partes[:i]] = contagem.get(partes[:i], 0) + 1
+    return [{"caminho": "/".join(k), "nome": k[-1], "nivel": len(k) - 1, "qtd": v} for k, v in sorted(contagem.items())]
+
+
+def _livre(alvo: Path) -> Path:
+    n = 2
+    while True:
+        candidato = alvo.with_name(f"{alvo.stem} ({n}){alvo.suffix}")
+        if not candidato.exists():
+            return candidato
+        n += 1
+
+
+def _assinatura(caminho: Path):
+    st = caminho.stat()
+    return st.st_size, st.st_mtime_ns
+
+
+def executar(plano: list[ItemPlano], destino, ao_progresso=None, cancelar=None, gravar_tags: bool = True) -> dict:
+    destino = Path(destino)
+    copiados = ignorados = erros = gravadas = falhas_tags = capas_trocadas = originais_alterados = 0
+    registro, revisao, detalhes_erro = [], [], []
+    for i, item in enumerate(plano, 1):
+        if cancelar is not None and cancelar.is_set():
+            break
+        origem = Path(item.origem)
+        alvo = destino / item.destino
+        try:
+            alvo.parent.mkdir(parents=True, exist_ok=True)
+            antes = _assinatura(origem)
+            tamanho = antes[0]
+            if alvo.exists():
+                if alvo.stat().st_size == tamanho:
+                    ignorados += 1
+                    registro.append({"origem": str(origem), "destino": str(alvo), "status": "ja_existia"})
+                    if item.revisao:
+                        revisao.append({"arquivo": item.nome or origem.stem, "motivo": item.revisao})
+                    continue
+                alvo = _livre(alvo)
+            shutil.copy2(origem, alvo)
+            if alvo.stat().st_size != tamanho:
+                raise OSError("tamanho diferente depois de copiar")
+            copiados += 1
+            reg = {"origem": str(origem), "destino": str(alvo), "status": "copiado"}
+            if gravar_tags and (item.limpar or item.ajustou or item.capa):
+                try:  # só a cópia é alterada; as tags de antes ficam no log para restaurar
+                    r = escrita.gravar(alvo, item.tags or {}, item.capa, limpar=item.limpar)
+                    reg.update(r)
+                    gravadas += 1
+                    capas_trocadas += 1 if r.get("capa_gravada") else 0
+                except Exception as e:  # noqa: BLE001
+                    falhas_tags += 1
+                    reg["erro_tags"] = str(e)
+            if _assinatura(origem) != antes:
+                originais_alterados += 1
+            if item.revisao:
+                revisao.append({"arquivo": item.nome or origem.stem, "motivo": item.revisao})
+            registro.append(reg)
+        except Exception as e:  # noqa: BLE001 - uma música com problema não pode parar as outras
+            erros += 1
+            detalhes_erro.append({"arquivo": origem.name, "detalhe": str(e)})
+            registro.append({"origem": str(origem), "destino": str(alvo), "status": "erro", "detalhe": str(e)})
+        if ao_progresso:
+            ao_progresso(i, len(plano))
+    pasta_log = destino / ".organizador"
+    pasta_log.mkdir(parents=True, exist_ok=True)
+    arq_log = pasta_log / f"log-{time.strftime('%Y%m%d-%H%M%S')}.json"
+    arq_log.write_text(json.dumps(registro, ensure_ascii=False, indent=1), encoding="utf-8")
+    # conferência final: tudo que deveria estar no destino está lá?
+    ausentes = sum(1 for r in registro if r["status"] in ("copiado", "ja_existia") and not Path(r["destino"]).exists())
+    primeiro = {}
+    for r in registro:
+        if r["status"] in ("copiado", "ja_existia"):
+            nome = Path(r["destino"]).relative_to(destino).parts[0]
+            primeiro[nome] = primeiro.get(nome, 0) + 1
+    return {"copiados": copiados, "ignorados": ignorados, "erros": erros, "tags_gravadas": gravadas,
+            "tags_falhas": falhas_tags, "log": str(arq_log), "capas_trocadas": capas_trocadas,
+            "originais_alterados": originais_alterados, "ausentes": ausentes, "pasta_destino": str(destino),
+            "revisao": revisao[:300], "revisao_total": len(revisao), "erros_detalhe": detalhes_erro[:50],
+            "primeiro_nivel": [{"nome": k, "qtd": v} for k, v in sorted(primeiro.items(), key=lambda kv: (kv[0] == "Revisão", kv[0].casefold()))],
+            "cancelado": bool(cancelar is not None and cancelar.is_set())}

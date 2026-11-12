@@ -1,0 +1,36 @@
+# Gera o programa para Windows na nuvem do GitHub (grátis para repositórios públicos).
+# Como usar: aba "Actions" > "Gerar programa para Windows" > "Run workflow".
+# Receita ainda NÃO testada no GitHub: se algum passo falhar, copie o erro e peça ajuda.
+name: Gerar programa para Windows
+on: [workflow_dispatch]
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Instalar dependências
+        run: pip install -r requirements.txt pyinstaller
+      - name: Baixar FFmpeg (build LGPL estável)
+        run: |
+          Invoke-WebRequest -Uri "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n8.1-latest-win64-lgpl-8.1.zip" -OutFile ffmpeg.zip
+          Expand-Archive ffmpeg.zip -DestinationPath ffmpeg_extraido
+          $pasta = (Get-ChildItem ffmpeg_extraido -Directory | Select-Object -First 1).FullName
+          New-Item -ItemType Directory -Force ferramentas | Out-Null
+          Copy-Item "$pasta\bin\ffmpeg.exe", "$pasta\bin\ffprobe.exe" ferramentas\
+          Copy-Item "$pasta\LICENSE.txt" ferramentas\FFMPEG-LICENSE.txt -ErrorAction SilentlyContinue
+          .\ferramentas\ffmpeg.exe -hide_banner -version | Select-Object -First 1
+          # Os testes chamam "ffmpeg" pelo PATH: deixa a pasta ferramentas visível nos passos seguintes
+          Add-Content -Path $env:GITHUB_PATH -Value (Resolve-Path ferramentas).Path
+      - name: Testes automáticos
+        run: |
+          python tests/test_basico.py
+          python tests/test_identificacao.py
+      - name: Empacotar
+        run: |
+          pyinstaller --noconfirm --onedir --name OrganizadorMusical --add-data "organizador/web;organizador/web" iniciar.py
+          Copy-Item -Recurse ferramentas dist\OrganizadorMusical\ferramentas
+          Copy-Item LICENCAS.md dist\OrganizadorMusical\
+      - uses: actions/upload-artifact@v4
+        with: { name: OrganizadorMusical-Windows, path: dist/OrganizadorMusical }

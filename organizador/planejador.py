@@ -13,6 +13,7 @@ from pathlib import Path
 from . import escrita
 from .limpeza import nome_de_arquivo
 from .modelos import Faixa
+from .taxonomia import grupo as grupo_genero
 
 PADROES = {
     "A": ("Gênero → BPM → Camelot", ["genero", "bpm", "camelot"]),
@@ -80,6 +81,7 @@ def planejar(
     min_bpm_conf: float = 3.0,
     min_tom_conf: float = 0.01,
     incluir_incertas: bool = False,
+    agrupar_generos: bool = False,
 ) -> list[ItemPlano]:
     _, partes = PADROES[padrao]
     usados: set[str] = set()
@@ -90,7 +92,7 @@ def planejar(
             pastas = ["Revisão", motivo]
         else:
             valores = {
-                "genero": limpar_nome(f.genero) if f.genero else "",
+                "genero": limpar_nome(grupo_genero(f.genero) if agrupar_generos else f.genero) if f.genero else "",
                 "bpm": rotulo_bpm(f.bpm, bpm_modo, bpm_tam) if f.bpm is not None else "",
                 "camelot": rotulo_camelot(f.camelot),
             }

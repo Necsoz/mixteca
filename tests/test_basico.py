@@ -58,6 +58,21 @@ def test_camelot_em_ordem_harmonica_e_nomes_profissionais():
     assert planejador.planejar([sem_tag], "D")[0].destino == "Big Room/128 BPM/Mike Hawkins - Lovestruck.mp3"
 
 
+def test_agrupar_generos_proximos_na_pasta_sem_mudar_a_tag():
+    from organizador.taxonomia import grupo
+    casos = {"Riddim": "Dubstep", "Melodic Dubstep": "Dubstep", "Brostep": "Dubstep", "Tech House": "House", "Electro House": "House",
+             "Progressive House": "House", "Big Room": "Big Room", "Psytrance": "Trance", "Melodic Techno": "Techno",
+             "Liquid Drum & Bass": "Drum & Bass", "Hardstyle": "Hardstyle & Hardcore", "Future Bass": "Trap & Future Bass",
+             "Indie Rock": "Rock", "Hardcore Punk": "Rock", "Heavy Metal": "Metal", "Synthpop": "Pop", "Sertanejo Universitário": "Sertanejo & Brasil",
+             "Hip-Hop": "Hip-Hop & R&B", "Gênero Inventado": "Gênero Inventado"}
+    for g, esperado in casos.items():
+        assert grupo(g) == esperado, (g, grupo(g))
+    f = Faixa(caminho="/x/a.mp3", titulo="A", artista="B", genero="Riddim", bpm=140, bpm_conf=9, camelot="6A", tom_conf=.1)
+    assert planejador.planejar([f], "A")[0].destino.startswith("Riddim/")
+    item = planejador.planejar([f], "A", agrupar_generos=True)[0]
+    assert item.destino == "Dubstep/140 BPM/06A/B - A.mp3" and item.tags["genero"] == "Riddim"
+
+
 def test_planejador_padroes():
     f = [_faixa("a.mp3"), _faixa("b.mp3", genero="Dubstep", bpm=140, cam="6A")]
     caminhos = {i.origem: i.destino for i in planejador.planejar(f, "A")}

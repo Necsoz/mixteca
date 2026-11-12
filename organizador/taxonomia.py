@@ -108,3 +108,40 @@ class Taxonomia:
             if partes & d["artistas"] and (y is None or d["anos"][0] <= y <= d["anos"][1]):
                 return d["genero"], d["converter"], y is not None
         return None
+
+
+# Famílias de gêneros próximos (opção "agrupar gêneros próximos" na hora de montar as pastas). A ordem importa:
+# a primeira regra que casar decide. O gênero gravado na tag continua o específico; só a PASTA usa a família.
+_GRUPOS = [
+    ("Dubstep", r"dubstep|brostep|riddim|deathstep|tearout|chillstep|drumstep|\b140\b"),
+    ("Drum & Bass", r"drum and bass|drum n bass|\bdnb\b|\bd n b\b|jungle|neurofunk|liquid funk|jump up"),
+    ("Hardstyle & Hardcore", r"hardstyle|rawstyle|hardcore|frenchcore|gabber|hard dance|uptempo"),
+    ("Trance", r"trance|goa"),
+    ("Techno", r"techno|minimal"),
+    ("Big Room", r"big room|mainstage|festival"),
+    ("Trap & Future Bass", r"future bass|\btrap\b|bass music|midtempo|glitch hop|wave\b"),
+    ("House", r"house|uk garage|garage|nu disco|disco|funky|electro\b|complextro|moombah"),
+    ("Hip-Hop & R&B", r"hip hop|\brap\b|r and b|\brnb\b|\bsoul\b|drill|grime|funk carioca"),
+    ("Metal", r"metal|metalcore|deathcore|djent"),
+    ("Rock", r"rock|punk|grunge|emo\b|indie|alternative|post hardcore|shoegaze"),
+    ("Reggae", r"reggae|dancehall|\bska\b|dub\b"),
+    ("Pop", r"\bpop\b|synthpop|k pop|j pop"),
+    ("Sertanejo & Brasil", r"sertanej|pagode|samba|forro|\bmpb\b|axe\b|piseiro|arrocha|funk\b|bossa"),
+    ("Latina", r"reggaeton|latin|salsa|bachata|cumbia"),
+    ("Jazz & Blues", r"jazz|blues|swing"),
+    ("Clássica & Trilha", r"classical|classica|orchestra|soundtrack|score\b|trilha"),
+    ("Chill & Ambient", r"ambient|chill|downtempo|lo fi|lofi|new age"),
+    ("Eletrônica (outros)", r"electronic|edm|dance|breakbeat|breaks|synthwave|phonk|idm|electro"),
+]
+_GRUPOS = [(nome, re.compile(padrao)) for nome, padrao in _GRUPOS]
+
+
+def grupo(genero: str) -> str:
+    """Família do gênero (ex.: Riddim -> Dubstep, Tech House -> House). Sem família conhecida, devolve o próprio gênero."""
+    k = chave(genero)
+    if "hardcore" in k and ("punk" in k or "post" in k):
+        return "Rock"
+    for nome, rx in _GRUPOS:
+        if rx.search(k):
+            return nome
+    return genero

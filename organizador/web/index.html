@@ -441,7 +441,6 @@ async function confirmarGeneros(idxs){
   if(!itens.length) return erro("Escreva o gênero antes de confirmar.");
   try{await api("/api/genero-faixa",{itens});await carregar(false)}catch(e){erro(e.message)}
 }
-}
 
 /* ---------- identificação na internet ---------- */
 const ROT={titulo:"Nome",artista:"Artista",album:"Álbum/Single",ano:"Ano",genero:"Gênero",capa:"Capa"};

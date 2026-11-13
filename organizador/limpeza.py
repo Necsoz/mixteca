@@ -65,7 +65,13 @@ def sem_grupos_estranhos(texto: str) -> str:
     return re.sub(r"\s{2,}", " ", t).strip(" -–|_.\t")
 
 
+_VAZIO = re.compile(r"^(?:unknown(?:\s+(?:album|artist|title|track))?|desconhecid[oa]|sem\s+t[ií]tulo|untitled|no\s+title|"
+                    r"(?:track|faixa|audio)\s*\d+|n\s*/?\s*a|none|null|\?+|-+)$", re.I)
+
+
 def limpar_texto(texto: str) -> str:
+    if _VAZIO.match((texto or "").strip()):
+        return ""  # "Unknown Album", "Track 01"...: é o mesmo que não ter a informação
     """Limpa um título, artista ou álbum. Devolve "" se só havia lixo."""
     t = texto or ""
     t = _tirar_grupos_lixo(t)

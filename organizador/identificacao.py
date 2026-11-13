@@ -135,7 +135,7 @@ def montar_proposta(faixa, online: dict | None, som, tax: Taxonomia) -> dict | N
             add("capa", "", online["capa"], "Cover Art Archive", nota["score"], "alta", False,
                 f"capa maior que a atual ({online['capa_melhor']} px)")
 
-    atual = faixa.genero
+    atual = "" if (faixa.genero_fonte or "").startswith("sugestão") else faixa.genero  # sugestão não confirmada não trava a busca
     suspeito = tax.suspeito(atual)  # "Spotify", "2015"...: trata como se estivesse vazio
     artista_ref, ano_ref = faixa.artista or (cand or {}).get("artista", ""), faixa.ano or (cand or {}).get("ano", "")
     if so_capa:

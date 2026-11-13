@@ -109,7 +109,7 @@ def planejar(
             n += 1
         usados.add(destino.lower())
         aj = f.ajustes or {}
-        tags = {"titulo": f.titulo, "artista": f.artista, "album": f.album, "genero": f.genero, "ano": f.ano}
+        tags = {"titulo": f.titulo, "artista": f.artista, "album": f.album or f.titulo, "genero": f.genero, "ano": f.ano}
         if f.bpm is not None and f.bpm_conf >= min_bpm_conf:
             tags["bpm"] = int(f.bpm)
         if f.camelot and f.tom_conf >= min_tom_conf:

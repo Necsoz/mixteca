@@ -98,6 +98,7 @@ tr.comp td{background:#60A5FA26}
 .cam2 img{width:44px;height:44px;border-radius:6px;object-fit:cover}
 .cam2 small{color:var(--mut)}
 button.mini{padding:2px 10px;font-size:13px}
+.sug{font-size:11px;border:1px solid var(--warn);color:var(--warn);border-radius:999px;padding:0 7px}
 button.ed{padding:0 6px;font-size:13px;border-radius:6px;background:transparent;border-color:transparent;color:var(--mut)}
 button.ed:hover{border-color:var(--acc);color:var(--txt)}button.ed.u{color:var(--warn)}
 .fila{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
@@ -209,10 +210,10 @@ button.ed:hover{border-color:var(--acc);color:var(--txt)}button.ed.u{color:var(-
 </section>
 
 <section id="s2b" class="off fora" data-p="2">
-  <h2>Gêneros que não consegui descobrir <small style="color:var(--mut);font-weight:400">(opcional)</small></h2>
-  <p class="hint"><b id="sg-n"></b> artistas ainda estão <b>sem gênero</b>, nem na internet nem pela sonoridade. Se quiser, escolha um gênero por artista (vale para todas as músicas dele); quem ficar sem gênero vai para a pasta <b class="warn">Revisão</b>. Seus arquivos não são alterados: o gênero fica guardado só no programa. Depois de aplicar, o BPM é recalculado já usando o gênero.</p>
-  <div class="row" style="margin-bottom:10px"><button id="b-usar-sug">Usar as sugestões</button><button class="go" id="b-aplicar-gen">Aplicar gêneros</button></div>
-  <div class="tw"><table><thead><tr><th>Artista</th><th>Músicas</th><th style="min-width:240px">Gênero</th></tr></thead><tbody id="sg-corpo"></tbody></table></div>
+  <h2>Gêneros para conferir <small style="color:var(--mut);font-weight:400">(opcional)</small></h2>
+  <p class="hint"><b id="sg-n"></b> músicas ficaram sem gênero confirmado. Onde deu, o Mixteca já colocou uma <b>sugestão</b> (cruzando outras músicas do mesmo artista, a sonoridade e a internet). Confira, troque se quiser e confirme. Sugestões não confirmadas são usadas mesmo assim; músicas sem nenhum gênero vão para a pasta <b class="warn">Revisão</b>.</p>
+  <div class="row" style="margin-bottom:10px"><button class="go" id="b-conf-todas">Confirmar todas as sugestões</button></div>
+  <div class="tw"><table><thead><tr><th>Música</th><th style="min-width:200px">Gênero</th><th>De onde veio a sugestão</th><th></th></tr></thead><tbody id="sg-corpo"></tbody></table></div>
   <datalist id="lista-generos"></datalist>
 </section>
 
@@ -229,7 +230,7 @@ button.ed:hover{border-color:var(--acc);color:var(--txt)}button.ed.u{color:var(-
   <p class="hint">Deixa o volume parecido entre as músicas, corta subgrave inaudível e segura picos que estouram. Gera <b>cópias novas</b> na pasta <b>Melhoradas</b> dentro do destino; as outras ficam como estão. Não recupera o que um MP3 de baixa qualidade já perdeu, e a cópia é um MP3 novo (alta qualidade). Leva cerca de 20 segundos por música.</p>
   <div class="opts" style="margin-top:0">
     <label>Quais:
-      <select id="escopo"><option value="estouram">Só as que estouram (pico acima de 0 dB)</option><option value="todas">Todas</option></select></label>
+      <select id="escopo"><option value="baixa">Só as de qualidade baixa</option><option value="estouram">Só as que estouram (pico acima de 0 dB)</option><option value="todas">Todas</option></select></label>
     <label>Volume alvo:
       <select id="alvo"><option value="-14">Suave (-14 LUFS)</option><option value="-10" selected>Padrão (-10 LUFS)</option><option value="-8">Forte (-8 LUFS)</option></select></label>
   </div>
@@ -335,7 +336,7 @@ async function carregar(rolar=true){
   $("#chips").innerHTML=`<span class="chip"><b>${faixas.length}</b> músicas</span><span class="chip"><b>${new Set(bons.map(f=>f.genero).filter(Boolean)).size}</b> gêneros</span>`+
     `<span class="chip ${baixas?"w":""}"><b>${baixas}</b> com qualidade baixa</span>`+(erros?`<span class="chip w"><b>${erros}</b> com erro de leitura</span>`:"");
   await atualizarPadroes(); await atualizarPrevia(); desenharTabela(); await carregarSemGenero(); await carregarConfig(); await carregarPropostas();
-  const falt=faixas.filter(f=>!f.erro&&(!f.titulo||!f.artista||!f.album||!f.genero||!f.tem_capa)).length;
+  const falt=faixas.filter(f=>!f.erro&&(!f.titulo||!f.artista||!f.genero||!f.tem_capa)).length;
   $("#chips-id").innerHTML=`<span class="chip ${falt?"w":""}"><b>${falt}</b> músicas com informação faltando</span>`;
   liberado=true; irPasso(rolar?2:passo);
 }
@@ -401,7 +402,7 @@ function desenharTabela(){
     const bpm=f.erro?"":`${(f.bpm_conf<3||f.fora)?'<span class="u">~</span>':""}${f.bpm}`;
     const cam=f.erro?`<span class="bad" title="${esc(f.erro)}">erro</span>`:`<span class="cam" style="background:${corCam(f.camelot)}" title="${esc(f.tom)}">${f.camelot}</span>${f.tom_conf<0.01?'<span class="u" title="tom incerto"> ?</span>':""}`;
     const cl=i===selecionada?"sel":compat(faixas[selecionada],f)?"comp":"";
-    return `<tr class="m ${cl}" data-i="${i}"><td title="${esc(f.caminho)}">${esc(nome)}</td><td>${esc(f.album||"—")}</td><td class="tg" title="${esc(f.genero_fonte?"fonte: "+f.genero_fonte:"")}">${esc(f.genero||"—")}${f.erro?"":` <button class="ed ${(f.genero_manual||(f.ajustes&&f.ajustes.includes("genero")))?"u":""}" data-e="${i}" title="Trocar o gênero desta música">✎</button>`}${f.ajustes&&f.ajustes.some(a=>a!=="genero")?' <span class="u" title="completado pelo programa: '+esc(f.ajustes.join(", "))+'">•</span>':""}</td><td>${bpm}</td><td>${cam}</td><td>${f.baixa?'<span class="u" title="Agudos cortados em '+Math.round((f.corte_hz||0)/1000)+' kHz">⚠ baixa</span>':'<span class="ok">ok</span>'}</td></tr>`}).join("")+
+    return `<tr class="m ${cl}" data-i="${i}"><td title="${esc(f.caminho)}">${esc(nome)}</td><td>${esc(f.album||"—")}</td><td class="tg" title="${esc(f.genero_fonte?"fonte: "+f.genero_fonte:"")}">${esc(f.genero||"—")}${(f.genero_fonte||"").startsWith("sugestão")?' <span class="sug" title="'+esc(f.genero_fonte)+' (não confirmado)">sugestão</span>':""}${f.erro?"":` <button class="ed ${(f.genero_manual||(f.ajustes&&f.ajustes.includes("genero")))?"u":""}" data-e="${i}" title="Trocar o gênero desta música">✎</button>`}${f.ajustes&&f.ajustes.some(a=>a!=="genero")?' <span class="u" title="completado pelo programa: '+esc(f.ajustes.join(", "))+'">•</span>':""}</td><td>${bpm}</td><td>${cam}</td><td>${f.baixa?'<span class="u" title="Agudos cortados em '+Math.round((f.corte_hz||0)/1000)+' kHz">⚠ baixa</span>':'<span class="ok">ok</span>'}</td></tr>`}).join("")+
     (lista.length>600?`<tr><td colspan="6" class="hint">Mostrando 600 de ${lista.length}. Use a busca para filtrar.</td></tr>`:"");
   document.querySelectorAll("#corpo button.ed").forEach(b=>b.onclick=ev=>{ev.stopPropagation();editarGenero(+b.dataset.e,b.closest("td"))});
   document.querySelectorAll("#corpo tr.m").forEach(tr=>tr.onclick=()=>{const i=+tr.dataset.i;selecionada=selecionada===i?null:i;desenharTabela()});
@@ -425,18 +426,21 @@ function editarGenero(i,td){
 /* ---------- completar gêneros ---------- */
 let semGenero=[];
 async function carregarSemGenero(){
-  const r=await api("/api/sem-genero"); semGenero=r.grupos;
+  const r=await api("/api/conferir"); semGenero=r.itens;
   $("#s2b").classList.toggle("off",!semGenero.length); $("#sg-n").textContent=semGenero.length;
+  $("#b-conf-todas").style.display=semGenero.some(g=>g.genero)?"":"none";
   $("#lista-generos").innerHTML=r.generos.map(g=>`<option value="${esc(g)}">`).join("");
-  $("#sg-corpo").innerHTML=semGenero.slice(0,300).map((g,i)=>`<tr><td title="${esc(g.exemplos.join(" · "))}">${esc(g.artista)}</td><td>${g.qtd}</td><td><input type="text" list="lista-generos" data-i="${i}" value="${esc(g.atual)}" placeholder="${g.sugestao?"sugestão: "+esc(g.sugestao):"ex.: Big Room"}"></td></tr>`).join("")+
-    (semGenero.length>300?`<tr><td colspan="3" class="hint">Mostrando 300 de ${semGenero.length} artistas (os com mais músicas).</td></tr>`:"");
+  $("#sg-corpo").innerHTML=semGenero.slice(0,300).map((g,i)=>`<tr><td title="${esc(g.arquivo)}">${esc(g.nome)}</td><td><input type="text" list="lista-generos" data-i="${i}" value="${esc(g.genero)}" placeholder="escreva o gênero" aria-label="Gênero de ${esc(g.nome)}"></td><td style="white-space:normal;color:var(--mut)">${g.genero?esc(g.motivo||"sugestão"):"sem pistas: não achei nada parecido"}</td><td><button class="mini" data-c="${i}">Confirmar</button></td></tr>`).join("")+
+    (semGenero.length>300?`<tr><td colspan="4" class="hint">Mostrando 300 de ${semGenero.length} músicas.</td></tr>`:"");
+  document.querySelectorAll("#sg-corpo button[data-c]").forEach(b=>b.onclick=()=>confirmarGeneros([+b.dataset.c]));
+  document.querySelectorAll("#sg-corpo input").forEach(inp=>inp.onkeydown=ev=>{if(ev.key==="Enter")confirmarGeneros([+inp.dataset.i])});
 }
-function usarSugestoes(){document.querySelectorAll("#sg-corpo input").forEach(inp=>{const g=semGenero[+inp.dataset.i];if(!inp.value&&g.sugestao)inp.value=g.sugestao})}
-async function aplicarGeneros(){
+async function confirmarGeneros(idxs){
   erro("");
-  const defs=[...document.querySelectorAll("#sg-corpo input")].map(i=>({g:semGenero[+i.dataset.i],v:i.value.trim()})).filter(x=>x.v!==x.g.atual).map(x=>({chave:x.g.chave,genero:x.v}));
-  if(!defs.length) return erro("Nenhum gênero novo para aplicar.");
-  try{await api("/api/definir-genero",{definicoes:defs});acompanhar()}catch(e){erro(e.message)}
+  const itens=idxs.map(i=>{const inp=document.querySelector(`#sg-corpo input[data-i="${i}"]`);return {caminho:semGenero[i].caminho,genero:inp?inp.value.trim():semGenero[i].genero}}).filter(x=>x.genero);
+  if(!itens.length) return erro("Escreva o gênero antes de confirmar.");
+  try{await api("/api/genero-faixa",{itens});await carregar(false)}catch(e){erro(e.message)}
+}
 }
 
 /* ---------- identificação na internet ---------- */
@@ -493,7 +497,7 @@ function mostrarResultado(r,aviso){
   const at=r.autoteste&&r.autoteste.acuracia!=null?`<br><small>Sonoridade: acertou ${Math.round(100*r.autoteste.acuracia)}% ao tentar adivinhar o gênero de ${r.autoteste.n} músicas suas que já tinham gênero.</small>`:"";
   const conf=r.media+r.baixa+r.alta_pendente;
   el.innerHTML=av+`<b class="ok">✔ Pronto.</b> Pesquisei ${r.pesquisadas} músicas${r.ja_pesquisadas?` (${r.ja_pesquisadas} já estavam guardadas)`:""} e preenchi sozinho <b>${r.aplicadas_auto}</b> informações. `+
-    (conf?`${conf} sugestões ficaram para você conferir (opcional). `:"")+`${r.sem_resultado} músicas sem resultado confiável.`+
+    (r.sugeridas?`<b>${r.sugeridas}</b> músicas sem gênero receberam uma <b>sugestão</b> (não confirmada). `:"")+(conf?`${conf} sugestões ficaram para você conferir (opcional). `:"")+`${r.sem_resultado} músicas sem resultado confiável.`+
     (r.falhas_rede?`<br><span class="warn">${r.falhas_rede} consultas falharam por problema de conexão; clique em Buscar de novo para tentar só essas.</span>`:"")+
     (r.extra_indisponivel?`<br><span class="warn">A fonte extra “${esc(r.extra_indisponivel)}” não respondeu e foi deixada de lado; usei as outras fontes.</span>`:"")+
     (r.aviso_som?`<br><small>${esc(r.aviso_som)}</small>`:"")+at;
@@ -534,7 +538,7 @@ $("#b-desfazer").onclick=async()=>{const f=faixas[selecionada];if(!f)return;awai
 $("#b-cfg").onclick=salvarConfig; $("#b-identificar").onclick=()=>identificar(true); $("#f-nivel").onchange=desenharPropostas;
 $("#b-ac-alta").onclick=()=>decidir({acao:"aceitar",nivel:"alta"}); $("#b-ac-media").onclick=()=>decidir({acao:"aceitar",nivel:"media"}); $("#b-rec-baixa").onclick=()=>decidir({acao:"recusar",nivel:"baixa"});
 $("#bpm_modo").onchange=mudouOpcao; $("#bpm_tam").onchange=mudouOpcao; $("#incertas").onchange=mudouOpcao; $("#agrupar").onchange=salvarAgrupar;
-$("#busca").oninput=desenharTabela; $("#b-usar-sug").onclick=usarSugestoes; $("#b-aplicar-gen").onclick=aplicarGeneros;
+$("#busca").oninput=desenharTabela; $("#b-conf-todas").onclick=()=>confirmarGeneros(semGenero.map((g,i)=>g.genero?i:-1).filter(i=>i>=0));
 document.querySelectorAll("#passos button").forEach(b=>b.onclick=()=>irPasso(+b.dataset.p));
 $("#b-voltar").onclick=()=>irPasso(passo-1); $("#b-avancar").onclick=()=>irPasso(passo+1);
 recordar(); carregarConfig().catch(()=>{}); irPasso(1);

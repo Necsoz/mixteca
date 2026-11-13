@@ -494,6 +494,32 @@ def test_discogs_identifica_quando_o_musicbrainz_nao_acha():
     assert identificacao.pesquisar_online(f, Cliente("", None, transp, dormir=lambda s: None), {}, _tmp() / "capas")["cand"] is None
 
 
+def test_sugestao_de_genero_cruzada_album_pela_faixa_e_placeholders():
+    from organizador import ajustes, limpeza, pipeline, planejador
+    assert limpeza.limpar_texto("Unknown Album") == "" and limpeza.limpar_texto("Track 03") == "" and limpeza.limpar_texto("Unknown Pleasures") == "Unknown Pleasures"
+    tmp = _tmp()
+    srv = servidor.criar_servidor(0, tmp / "c.db", tmp)
+    E = servidor.E
+    t = E.tax
+    a = pipeline.finalizar(Faixa(caminho="/a.mp3", titulo="A", artista="Blasterjaxx", album="Unknown Album", genero="Big Room"), t, None)
+    b = pipeline.finalizar(Faixa(caminho="/b.mp3", titulo="B", artista="Blasterjaxx", genero="Big Room"), t, None)
+    c = pipeline.finalizar(Faixa(caminho="/c.mp3", titulo="Back To Me", artista="Blasterjaxx & KSHMR", album="Unknown Album", genero="Unknown"), t, None)
+    d = pipeline.finalizar(Faixa(caminho="/d.mp3", titulo="Sozinha", artista="Ninguém Conhece"), t, None)
+    E.faixas = [a, b, c, d]
+    assert a.album == "" and servidor._sugerir_generos() == 1
+    assert c.genero == "Big Room" and c.genero_fonte.startswith("sugestão") and "mesmo artista" in c.genero_fonte and d.genero == ""
+    assert servidor._precisa(c)                                 # sugestão não trava buscas futuras
+    itens = servidor.r_conferir({})["itens"]
+    assert [i["nome"] for i in itens] == ["Blasterjaxx & KSHMR — Back To Me", "Ninguém Conhece — Sozinha"] and itens[0]["genero"] == "Big Room"
+    assert next(x for x in servidor.r_faixas({})["faixas"] if x["caminho"] == "/a.mp3")["album"] == "A"   # sem álbum: nome da faixa
+    c.bpm, c.bpm_conf, c.camelot, c.tom_conf = 128, 9, "8A", .1
+    assert planejador.planejar([c], "A")[0].tags["album"] == "Back To Me"
+    # confirmar (várias de uma vez) tira o aviso de sugestão
+    servidor.r_genero_faixa({"itens": [{"caminho": "/c.mp3", "genero": "Big Room"}, {"caminho": "/d.mp3", "genero": "tech house"}]})
+    assert c.genero_fonte == "você" and d.genero == "Tech House" and servidor.r_conferir({})["itens"] == []
+    srv.server_close()
+
+
 def _esperar(E, limite=120):
     ini = time.time()
     while time.time() - ini < limite:

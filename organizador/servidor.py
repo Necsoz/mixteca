@@ -150,7 +150,7 @@ def r_faixas(_):
             "tom": nome_tom(f.tom_pc, f.tom_menor) if f.tom_pc is not None else "", "tom_conf": f.tom_conf,
             "corte_hz": f.corte_hz, "baixa": f.qualidade_baixa, "pico_db": f.pico_db, "erro": f.erro,
             "fora": f.bpm_fora_da_faixa, "genero_manual": f.genero_manual,
-            "album": f.album, "ano": f.ano, "genero_fonte": f.genero_fonte, "tem_capa": f.tem_capa,
+            "album": f.album or f.titulo, "album_da_faixa": bool(not f.album and f.titulo), "ano": f.ano, "genero_fonte": f.genero_fonte, "tem_capa": f.tem_capa,
             "ajustes": sorted(f.ajustes),
         })
     return {"faixas": saida}
@@ -243,9 +243,12 @@ def r_abrir_pasta(_):
 def r_melhorar(c):
     plano = _plano(c)
     destino = _destino(c)
-    so_estouram = c.get("escopo") == "estouram"
+    escopo = c.get("escopo")
     por_caminho = {f.caminho: f for f in E.faixas}
-    itens = [i for i in plano if not so_estouram or (por_caminho[i.origem].pico_db or -99) > 0]
+    itens = [i for i in plano if (escopo == "estouram" and (por_caminho[i.origem].pico_db or -99) > 0)
+             or (escopo == "baixa" and por_caminho[i.origem].qualidade_baixa) or escopo not in ("estouram", "baixa")]
+    if not itens:
+        raise Erro("Nenhuma música se encaixa nessa escolha.")
     alvo = float(c.get("alvo_lufs") or -10)
     if not -20 <= alvo <= -5:
         raise Erro("Volume alvo fora do intervalo permitido.")
@@ -356,8 +359,57 @@ def r_definir_genero(c):
 
 
 # ------------------------------------------------- identificação, gêneros e metadados
+def _sugerido(f) -> bool:
+    return (f.genero_fonte or "").startswith("sugestão")
+
+
+def _sugerir_generos() -> int:
+    """Para quem ficou sem gênero: cruza o que existe (outras músicas do mesmo artista na biblioteca, sonoridade e
+    palpites fracos da internet) e aplica o mais provável como SUGESTÃO, marcada como não confirmada."""
+    from collections import Counter
+    from .casamento import _SEP_ARTISTAS, norm
+    partes = lambda a: {norm(p) for p in _SEP_ARTISTAS.split(a or "") if norm(p)}  # noqa: E731
+    por_artista: dict[str, Counter] = {}
+    for f in E.faixas:
+        if not f.erro and f.genero and not _sugerido(f) and not E.tax.generico(f.genero) and not E.tax.suspeito(f.genero):
+            for a in partes(f.artista):
+                por_artista.setdefault(a, Counter())[f.genero] += 1
+    palpites = {p["caminho"]: p["campos"]["genero"] for p in E.cache.propostas_todas()
+                if "genero" in p["campos"] and not p["campos"]["genero"].get("recusado")}
+    sobre = E.cache.sobrescritas()
+    n = 0
+    for f in E.faixas:
+        if f.erro or (f.genero and not E.tax.suspeito(f.genero)):
+            continue
+        pontos: dict[str, float] = {}
+        motivos: dict[str, list[str]] = {}
+
+        def somar(g, peso, motivo):
+            pontos[g] = pontos.get(g, 0) + peso
+            motivos.setdefault(g, []).append(motivo)
+
+        conta = Counter()
+        for a in partes(f.artista):
+            conta.update(por_artista.get(a, {}))
+        if conta:
+            g, q = conta.most_common(1)[0]
+            somar(g, 0.45 + 0.35 * q / sum(conta.values()), "outras músicas do mesmo artista")
+        som = E.classificador.prever(f.vetor) if E.classificador.pronto else None
+        if som and som[1] >= 0.34:
+            somar(som[0], som[1], "sonoridade parecida")
+        pal = palpites.get(f.caminho)
+        if pal and pal.get("novo"):
+            somar(E.tax.normalizar(pal["novo"]), 0.4, "palpite da internet")
+        if not pontos:
+            continue
+        g = max(pontos, key=pontos.get)
+        ajustes.registrar(E.cache, sobre, f, {"genero": {"novo": g, "fonte": "sugestão: " + " + ".join(dict.fromkeys(motivos[g])), "nivel": "sugestao"}})
+        n += 1
+    return n
+
+
 def _precisa(f) -> bool:
-    return (not f.erro) and (not f.titulo or not f.artista or not f.album or not f.genero or E.tax.generico(f.genero) or E.tax.suspeito(f.genero)
+    return (not f.erro) and (_sugerido(f) or not f.titulo or not f.artista or not f.album or not f.genero or E.tax.generico(f.genero) or E.tax.suspeito(f.genero)
                              or (not f.tem_capa and "capa_arquivo" not in f.ajustes)
                              or bool(limpeza.grupos_estranhos(f.titulo) or limpeza.grupos_estranhos(f.album)))  # texto a conferir na internet
 
@@ -365,7 +417,7 @@ def _precisa(f) -> bool:
 def _treinar() -> dict:
     E.classificador = ClassificadorSom()
     exemplos = [f for f in E.faixas if not f.erro and f.vetor and f.genero and not E.tax.generico(f.genero) and not E.tax.suspeito(f.genero)
-                and not f.genero_fonte.startswith("som")]
+                and not f.genero_fonte.startswith("som") and not _sugerido(f)]
     return E.classificador.treinar([f.vetor for f in exemplos], [f.genero for f in exemplos])
 
 
@@ -502,10 +554,11 @@ def _identificar_tudo(progresso, internet: bool = True, escopo: str = "faltando"
     reanalise = [f for f in afetadas if _bpm_destoa(f)]
     if reanalise and not E.cancelar.is_set():
         _reanalisar(reanalise, lambda i, n, nome="": progresso(i, n, "Ajustando BPM: " + nome))
+    sugeridas = _sugerir_generos() if not E.cancelar.is_set() else 0
     pend = [p for p in novas if p["status"] == "pendente"]
     conta = lambda nv: sum(1 for p in pend for v in p["campos"].values() if v["nivel"] == nv and not v.get("aplicado"))  # noqa: E731
     return {"pesquisadas": len(online), "ja_pesquisadas": feitas_antes, "falhas_rede": falhas,
-            "aplicadas_auto": n_auto, "media": conta("media"), "baixa": conta("baixa"), "alta_pendente": conta("alta"),
+            "aplicadas_auto": n_auto, "sugeridas": sugeridas, "media": conta("media"), "baixa": conta("baixa"), "alta_pendente": conta("alta"),
             "sem_resultado": len(considerar) - len(novas), "autoteste": E.classificador.autoteste if E.classificador.pronto else None,
             "aviso_som": E.classificador.motivo or None,
             "extra_indisponivel": cli.extra_off if internet else "",
@@ -600,17 +653,36 @@ def r_decidir(c):
     return {"ok": True, "campos": n, "reanalisando": len(reanalise)}
 
 
+def r_conferir(_):
+    """Músicas sem gênero confirmado (sem gênero ou só com sugestão), uma por linha, para o usuário decidir."""
+    itens = []
+    for f in E.faixas:
+        if f.erro or (f.genero and not _sugerido(f)):
+            continue
+        nome = f"{f.artista} — {f.titulo}" if f.artista and f.titulo else (f.titulo or Path(f.caminho).stem)
+        itens.append({"caminho": f.caminho, "nome": nome, "arquivo": Path(f.caminho).name, "genero": f.genero,
+                      "motivo": (f.genero_fonte or "").replace("sugestão: ", "") if f.genero else ""})
+    itens.sort(key=lambda i: (not i["genero"], i["nome"].casefold()))
+    conhecidos = sorted({f.genero for f in E.faixas if f.genero} | set(GENEROS_COMUNS))
+    return {"itens": itens, "generos": conhecidos}
+
+
 def r_genero_faixa(c):
-    """O usuário corrige o gênero de UMA música (vale mais que qualquer fonte; vai para a cópia, o original não muda)."""
-    genero = limpar_genero(str(c.get("genero") or ""))[:60] if c.get("genero") else ""
-    f = next((x for x in E.faixas if x.caminho == c.get("caminho")), None)
-    if f is None or f.erro:
-        raise Erro("Música não encontrada.")
-    if not genero:
-        raise Erro("Escreva o gênero.")
-    genero = E.tax.normalizar(genero)
-    ajustes.registrar(E.cache, E.cache.sobrescritas(), f, {"genero": {"novo": genero, "fonte": "você", "nivel": "alta"}})
-    return {"ok": True, "genero": f.genero}
+    """O usuário define o gênero de uma ou mais músicas (vale mais que qualquer fonte; vai para a cópia, o original não muda)."""
+    pedidos = c.get("itens") or [{"caminho": c.get("caminho"), "genero": c.get("genero")}]
+    por_caminho = {f.caminho: f for f in E.faixas}
+    sobre = E.cache.sobrescritas()
+    feitos, ultimo = 0, ""
+    for p in pedidos[:5000]:
+        f = por_caminho.get(p.get("caminho"))
+        genero = limpar_genero(str(p.get("genero") or ""))[:60] if p.get("genero") else ""
+        if f is None or f.erro or not genero:
+            continue
+        ajustes.registrar(E.cache, sobre, f, {"genero": {"novo": E.tax.normalizar(genero), "fonte": "você", "nivel": "alta"}})
+        feitos, ultimo = feitos + 1, f.genero
+    if not feitos:
+        raise Erro("Escreva o gênero antes de confirmar.")
+    return {"ok": True, "feitos": feitos, "genero": ultimo}
 
 
 def r_desfazer(c):
@@ -640,7 +712,7 @@ def r_cancelar(_):
 
 
 ROTAS_GET = {"/api/vivo": lambda _: {"ok": True}, "/api/estado": r_estado, "/api/faixas": r_faixas, "/api/sem-genero": r_sem_genero,
-             "/api/config": r_config, "/api/grupos": r_grupos, "/api/propostas": r_propostas, "/api/precisao-som": r_precisao_som}
+             "/api/config": r_config, "/api/grupos": r_grupos, "/api/conferir": r_conferir, "/api/propostas": r_propostas, "/api/precisao-som": r_precisao_som}
 ROTAS_POST = {
     "/api/pasta": r_pasta, "/api/analisar": r_analisar, "/api/padroes": r_padroes, "/api/previa": r_previa,
     "/api/definir-genero": r_definir_genero, "/api/copiar": r_copiar, "/api/melhorar": r_melhorar, "/api/cancelar": r_cancelar,

@@ -15,7 +15,7 @@ na versão que for distribuir e consulte um advogado.**
 | FFmpeg / FFprobe (build **LGPL**) | ler áudio e tags, melhorar volume | LGPL 2.1+ | verificado no site do FFmpeg: não usar `--enable-gpl` nem `--enable-nonfree`; distribuir como programa separado, com o texto da licença e o link do código-fonte |
 | MusicBrainz (API) | identificar músicas e gêneros | dados centrais CC0; tags/avaliações possivelmente CC BY-NC-SA | **a confirmar antes de vender**; exige User-Agent com contato, máx. ~1 req/s |
 | Cover Art Archive | capas | API aberta; imagens com direitos dos titulares | **a confirmar**; uso comercial das imagens pode exigir cuidado |
-| AcoustID + Chromaprint (`fpcalc`, opcional) | reconhecimento por som | AcoustID gratuito só para uso não comercial; Chromaprint MIT/LGPL | **a confirmar**; `fpcalc` não vem no pacote |
+| AcoustID + Chromaprint (`fpcalc`, opcional) | reconhecimento por som | AcoustID gratuito só para uso não comercial; Chromaprint MIT/LGPL | **a confirmar**; o `fpcalc` (binário oficial do Chromaprint 1.5.1, que embute partes do FFmpeg sob LGPL) é baixado pelo workflow e vai na pasta `ferramentas` |
 | Last.fm (opcional) | tags de gênero | termos da API Last.fm | **a confirmar** (uso comercial) |
 | Discogs (opcional, token gratuito) | estilos de música eletrônica | termos da API Discogs | **a confirmar** (uso comercial) |
 | Interface (HTML/CSS/JS próprios) | tela | do próprio projeto | sem fontes nem ícones externos |

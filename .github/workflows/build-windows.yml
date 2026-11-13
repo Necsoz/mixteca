@@ -23,6 +23,14 @@ jobs:
           .\ferramentas\ffmpeg.exe -hide_banner -version | Select-Object -First 1
           # Os testes chamam "ffmpeg" pelo PATH: deixa a pasta ferramentas visível nos passos seguintes
           Add-Content -Path $env:GITHUB_PATH -Value (Resolve-Path ferramentas).Path
+      - name: Baixar fpcalc (Chromaprint, para o reconhecimento pelo som)
+        continue-on-error: true   # se o download falhar, o programa é gerado sem o fpcalc (o resto funciona igual)
+        run: |
+          Invoke-WebRequest -Uri "https://github.com/acoustid/chromaprint/releases/download/v1.5.1/chromaprint-fpcalc-1.5.1-windows-x86_64.zip" -OutFile fpcalc.zip
+          Expand-Archive fpcalc.zip -DestinationPath fpcalc_extraido
+          $exe = Get-ChildItem fpcalc_extraido -Recurse -Filter fpcalc.exe | Select-Object -First 1
+          Copy-Item $exe.FullName ferramentas\
+          .\ferramentas\fpcalc.exe -version
       - name: Testes automáticos
         run: |
           python tests/test_basico.py

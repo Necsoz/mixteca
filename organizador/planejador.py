@@ -73,6 +73,45 @@ def _motivo_revisao(f: Faixa, partes: list[str], min_bpm_conf: float, min_tom_co
     return None
 
 
+def agrupar_bpms(contagem: dict[int, int], minimo: int = 3, largura: int = 5, salto: int = 3) -> dict[int, str]:
+    """Junta BPMs vizinhos que têm poucas músicas. contagem: {bpm: quantidade} -> {bpm: nome da pasta}.
+
+    Um grupo cresce até ter pelo menos `minimo` músicas, sem passar de `largura` BPM entre o menor e o maior
+    (128 e 133, por exemplo: ainda dá para mixar ajustando o pitch) e sem pular buracos maiores que `salto`."""
+    grupos: list[list[int]] = []
+    atual: list[int] = []
+    cheio = lambda g: sum(contagem[x] for x in g) >= minimo  # noqa: E731
+    for b in sorted(contagem):
+        sozinho = contagem[b] >= minimo  # BPM que já tem bastante música fica com a pasta só dele
+        if atual and (sozinho or b - atual[0] > largura or b - atual[-1] > salto or cheio(atual)):
+            grupos.append(atual)
+            atual = []
+        atual.append(b)
+        if sozinho:
+            grupos.append(atual)
+            atual = []
+    if atual:
+        grupos.append(atual)
+    mudou = True
+    while mudou:  # grupo que ficou pequeno entra no vizinho mais próximo (antes ou depois), se couber
+        mudou = False
+        for i, g in enumerate(grupos):
+            if cheio(g):
+                continue
+            opcoes = []
+            if i > 0 and g[-1] - grupos[i - 1][0] <= largura and g[0] - grupos[i - 1][-1] <= salto:
+                opcoes.append((g[0] - grupos[i - 1][-1], i - 1))
+            if i + 1 < len(grupos) and grupos[i + 1][-1] - g[0] <= largura and grupos[i + 1][0] - g[-1] <= salto:
+                opcoes.append((grupos[i + 1][0] - g[-1], i + 1))
+            if opcoes:
+                j = min(opcoes)[1]
+                grupos[min(i, j)] = sorted(grupos[i] + grupos[j])
+                del grupos[max(i, j)]
+                mudou = True
+                break
+    return {b: (f"{g[0]} BPM" if g[0] == g[-1] else f"{g[0]}-{g[-1]} BPM") for g in grupos for b in g}
+
+
 def planejar(
     faixas: list[Faixa],
     padrao: str = "A",
@@ -87,16 +126,35 @@ def planejar(
     _, partes = PADROES[padrao]
     usados: set[str] = set()
     plano: list[ItemPlano] = []
+    antes_do_bpm = partes[:partes.index("bpm")] if "bpm" in partes else []
+
+    def pasta_genero(f):
+        return limpar_nome(grupo_genero(f.genero, grupos_proprios) if agrupar_generos else f.genero) if f.genero else ""
+
+    def contexto(f):  # pastas que vêm antes do BPM: os BPMs são juntados dentro de cada uma (ex.: dentro de cada gênero)
+        return tuple(pasta_genero(f) if p == "genero" else rotulo_camelot(f.camelot) for p in antes_do_bpm)
+
+    motivos = {f.caminho: _motivo_revisao(f, partes, min_bpm_conf, min_tom_conf, incluir_incertas) for f in faixas}
+    rotulos_auto: dict[tuple, dict[int, str]] = {}
+    if bpm_modo == "auto" and "bpm" in partes:
+        contagens: dict[tuple, dict[int, int]] = {}
+        for f in faixas:
+            if not motivos[f.caminho] and f.bpm is not None:
+                c = contagens.setdefault(contexto(f), {})
+                c[int(round(f.bpm))] = c.get(int(round(f.bpm)), 0) + 1
+        rotulos_auto = {k: agrupar_bpms(c) for k, c in contagens.items()}
     for f in sorted(faixas, key=lambda x: x.caminho.lower()):
-        motivo = _motivo_revisao(f, partes, min_bpm_conf, min_tom_conf, incluir_incertas)
+        motivo = motivos[f.caminho]
         if motivo:
             pastas = ["Revisão", motivo]
         else:
-            valores = {
-                "genero": limpar_nome(grupo_genero(f.genero, grupos_proprios) if agrupar_generos else f.genero) if f.genero else "",
-                "bpm": rotulo_bpm(f.bpm, bpm_modo, bpm_tam) if f.bpm is not None else "",
-                "camelot": rotulo_camelot(f.camelot),
-            }
+            if f.bpm is None:
+                bpm = ""
+            elif bpm_modo == "auto":
+                bpm = rotulos_auto.get(contexto(f), {}).get(int(round(f.bpm))) or rotulo_bpm(f.bpm)
+            else:
+                bpm = rotulo_bpm(f.bpm, bpm_modo, bpm_tam)
+            valores = {"genero": pasta_genero(f), "bpm": bpm, "camelot": rotulo_camelot(f.camelot)}
             pastas = [valores[p] for p in partes]
         ext = Path(f.caminho).suffix.lower()
         base_nome = limpar_nome(nome_de_arquivo(f.titulo, f.artista, Path(f.caminho).stem))

@@ -106,7 +106,7 @@ def _parametros_plano(c: dict) -> dict:
         raise Erro("Padrão de pastas inválido.")
     return {
         "padrao": padrao,
-        "bpm_modo": "faixas" if c.get("bpm_modo") == "faixas" else "exato",
+        "bpm_modo": c.get("bpm_modo") if c.get("bpm_modo") in ("faixas", "auto") else "exato",
         "bpm_tam": max(2, min(20, int(c.get("bpm_tam") or 5))),
         "incluir_incertas": bool(c.get("incluir_incertas")),
         "agrupar_generos": bool(c.get("agrupar_generos")),

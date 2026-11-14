@@ -105,6 +105,22 @@ def test_melhoria_aguenta_medicao_fora_da_faixa():
     assert r["status"] == "melhorado" and Path(r["destino"]).stat().st_size > 1000, r
 
 
+def test_bpm_automatico_junta_vizinhos_com_poucas_musicas():
+    g = planejador.agrupar_bpms({124: 1, 125: 1, 126: 2, 128: 40, 129: 1, 130: 2, 140: 1, 150: 9, 151: 1})
+    assert g[124] == g[125] == g[126] == "124-126 BPM"      # poucas músicas e vizinhos: uma pasta só
+    assert g[128] == "128 BPM"                                # já tem bastante: fica sozinho
+    assert g[129] == g[130] == "129-130 BPM"
+    assert g[140] == "140 BPM"                                # longe de todo mundo: não é forçado a juntar
+    assert g[150] == g[151] == "150-151 BPM"                  # a música sozinha no 151 entra no vizinho
+    assert planejador.agrupar_bpms({100: 3, 101: 3, 103: 1}) == {100: "100 BPM", 101: "101-103 BPM", 103: "101-103 BPM"}
+    assert all(int(r.split()[0].split("-")[-1]) - int(r.split()[0].split("-")[0]) <= 5 for r in g.values())
+    f = [_faixa(f"a{i}.mp3", bpm=b) for i, b in enumerate([126, 127, 128, 128])] + [_faixa("d.mp3", genero="Dubstep", bpm=127, cam="6A")]
+    plano = {i.origem: i.destino for i in planejador.planejar(f, "A", bpm_modo="auto")}
+    assert plano["/x/a0.mp3"].startswith("Big Room/126-128 BPM/08A/") and plano["/x/a3.mp3"].startswith("Big Room/126-128 BPM/")
+    assert plano["/x/d.mp3"].startswith("Dubstep/127 BPM/06A/")   # cada gênero junta os seus, sem misturar
+    assert {i.origem: i.destino for i in planejador.planejar(f, "A")}["/x/a0.mp3"].startswith("Big Room/126 BPM/")
+
+
 def test_planejador_padroes():
     f = [_faixa("a.mp3"), _faixa("b.mp3", genero="Dubstep", bpm=140, cam="6A")]
     caminhos = {i.origem: i.destino for i in planejador.planejar(f, "A")}

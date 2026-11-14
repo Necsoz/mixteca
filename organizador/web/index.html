@@ -194,7 +194,7 @@ button.ed:hover{border-color:var(--acc);color:var(--txt)}button.ed.u{color:var(-
   <div class="pads" id="pads"></div>
   <div class="opts">
     <label>BPM nas pastas:
-      <select id="bpm_modo"><option value="exato">Exato (128 BPM)</option><option value="faixas">Em faixas</option></select></label>
+      <select id="bpm_modo" title="Automático: junta BPMs vizinhos que têm poucas músicas (até 5 BPM de diferença), dentro de cada gênero"><option value="auto" selected>Automático (junta BPMs vizinhos)</option><option value="exato">Exato (128 BPM)</option><option value="faixas">Em faixas fixas</option></select></label>
     <label id="l-tam" style="display:none">Tamanho da faixa:
       <select id="bpm_tam"><option>2</option><option>3</option><option selected>5</option><option>10</option></select></label>
     <label title="Ex.: Riddim, Brostep e Melodic Dubstep vão para a pasta Dubstep; Tech House e Deep House para House. A tag da música continua com o gênero exato."><input type="checkbox" id="agrupar"> Juntar gêneros próximos na mesma pasta</label>

@@ -202,10 +202,56 @@ def _assinatura(caminho: Path):
     return st.st_size, st.st_mtime_ns
 
 
+def _carregar_indice(destino: Path) -> dict:
+    """O que o programa já colocou neste destino: {caminho do original: {"rel": lugar da cópia, "tam", "mtime", "tags", "capa"}}.
+    Na primeira vez, é montado a partir dos registros (logs) de cópias anteriores."""
+    pasta = destino / ".organizador"
+    try:
+        return json.loads((pasta / "indice.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        pass
+    indice: dict = {}
+    for log in sorted(pasta.glob("log-*.json")) if pasta.is_dir() else []:
+        try:
+            for r in json.loads(log.read_text(encoding="utf-8")):
+                if r.get("status") in ("copiado", "ja_existia", "movido"):
+                    indice[r["origem"]] = {"rel": Path(r["destino"]).relative_to(destino).as_posix()}
+        except (OSError, ValueError, KeyError):
+            continue
+    return indice
+
+
+def _apagar_pastas_vazias(destino: Path) -> int:
+    """Depois de mover cópias, tira as pastas que ficaram vazias (nunca apaga arquivos)."""
+    n = 0
+    for pasta in sorted((p for p in destino.rglob("*") if p.is_dir() and ".organizador" not in p.parts), key=lambda p: -len(p.parts)):
+        try:
+            pasta.rmdir()  # só funciona se estiver vazia
+            n += 1
+        except OSError:
+            pass
+    return n
+
+
 def executar(plano: list[ItemPlano], destino, ao_progresso=None, cancelar=None, gravar_tags: bool = True) -> dict:
     destino = Path(destino)
-    copiados = ignorados = erros = gravadas = falhas_tags = capas_trocadas = originais_alterados = 0
+    copiados = ignorados = erros = gravadas = falhas_tags = capas_trocadas = originais_alterados = movidos = atualizados = 0
     registro, revisao, detalhes_erro = [], [], []
+    indice = _carregar_indice(destino)
+
+    def gravar(alvo, item, reg):
+        nonlocal gravadas, falhas_tags, capas_trocadas
+        if not (gravar_tags and (item.limpar or item.ajustou or item.capa)):
+            return
+        try:  # só a cópia é alterada; as tags de antes ficam no log para restaurar
+            r = escrita.gravar(alvo, item.tags or {}, item.capa, limpar=item.limpar)
+            reg.update(r)
+            gravadas += 1
+            capas_trocadas += 1 if r.get("capa_gravada") else 0
+        except Exception as e:  # noqa: BLE001
+            falhas_tags += 1
+            reg["erro_tags"] = str(e)
+
     for i, item in enumerate(plano, 1):
         if cancelar is not None and cancelar.is_set():
             break
@@ -215,28 +261,41 @@ def executar(plano: list[ItemPlano], destino, ao_progresso=None, cancelar=None, 
             alvo.parent.mkdir(parents=True, exist_ok=True)
             antes = _assinatura(origem)
             tamanho = antes[0]
-            if alvo.exists():
-                if alvo.stat().st_size == tamanho:
-                    ignorados += 1
-                    registro.append({"origem": str(origem), "destino": str(alvo), "status": "ja_existia"})
-                    if item.revisao:
-                        revisao.append({"arquivo": item.nome or origem.stem, "motivo": item.revisao})
-                    continue
-                alvo = _livre(alvo)
-            shutil.copy2(origem, alvo)
-            if alvo.stat().st_size != tamanho:
-                raise OSError("tamanho diferente depois de copiar")
-            copiados += 1
-            reg = {"origem": str(origem), "destino": str(alvo), "status": "copiado"}
-            if gravar_tags and (item.limpar or item.ajustou or item.capa):
-                try:  # só a cópia é alterada; as tags de antes ficam no log para restaurar
-                    r = escrita.gravar(alvo, item.tags or {}, item.capa, limpar=item.limpar)
-                    reg.update(r)
-                    gravadas += 1
-                    capas_trocadas += 1 if r.get("capa_gravada") else 0
-                except Exception as e:  # noqa: BLE001
-                    falhas_tags += 1
-                    reg["erro_tags"] = str(e)
+            ant = indice.get(str(origem))
+            mesma_musica = bool(ant) and ant.get("tam") in (None, tamanho) and ant.get("mtime") in (None, antes[1])
+            antiga = destino / ant["rel"] if ant else None
+            marcas = {"tam": tamanho, "mtime": antes[1], "tags": item.tags, "capa": item.capa}
+            reg = None
+            if mesma_musica and antiga.is_file() and antiga.resolve() == alvo.resolve():
+                # a cópia desta música já está no lugar certo: não copia de novo; só atualiza as tags se algo mudou
+                reg = {"origem": str(origem), "destino": str(alvo), "status": "ja_existia"}
+                if "tags" in ant and (ant.get("tags") != item.tags or ant.get("capa") != item.capa):
+                    gravar(alvo, item, reg)
+                    atualizados += 1
+                ignorados += 1
+            elif mesma_musica and antiga.is_file() and not alvo.exists():
+                # a cópia já existe em outra pasta (mudou o gênero, o BPM da pasta ou o nome): MOVE em vez de duplicar
+                shutil.move(str(antiga), str(alvo))
+                reg = {"origem": str(origem), "destino": str(alvo), "status": "movido", "de": str(antiga)}
+                gravar(alvo, item, reg)
+                movidos += 1
+            if reg is None:
+                if alvo.exists():
+                    if alvo.stat().st_size == tamanho:
+                        ignorados += 1
+                        registro.append({"origem": str(origem), "destino": str(alvo), "status": "ja_existia"})
+                        indice[str(origem)] = {"rel": alvo.relative_to(destino).as_posix(), **marcas}
+                        if item.revisao:
+                            revisao.append({"arquivo": item.nome or origem.stem, "motivo": item.revisao})
+                        continue
+                    alvo = _livre(alvo)
+                shutil.copy2(origem, alvo)
+                if alvo.stat().st_size != tamanho:
+                    raise OSError("tamanho diferente depois de copiar")
+                copiados += 1
+                reg = {"origem": str(origem), "destino": str(alvo), "status": "copiado"}
+                gravar(alvo, item, reg)
+            indice[str(origem)] = {"rel": alvo.relative_to(destino).as_posix(), **marcas}
             if _assinatura(origem) != antes:
                 originais_alterados += 1
             if item.revisao:
@@ -248,18 +307,25 @@ def executar(plano: list[ItemPlano], destino, ao_progresso=None, cancelar=None, 
             registro.append({"origem": str(origem), "destino": str(alvo), "status": "erro", "detalhe": str(e)})
         if ao_progresso:
             ao_progresso(i, len(plano))
+    pastas_vazias = _apagar_pastas_vazias(destino) if movidos else 0
     pasta_log = destino / ".organizador"
     pasta_log.mkdir(parents=True, exist_ok=True)
     arq_log = pasta_log / f"log-{time.strftime('%Y%m%d-%H%M%S')}.json"
     arq_log.write_text(json.dumps(registro, ensure_ascii=False, indent=1), encoding="utf-8")
+    try:
+        (pasta_log / "indice.json").write_text(json.dumps(indice, ensure_ascii=False), encoding="utf-8")
+    except OSError:
+        pass
     # conferência final: tudo que deveria estar no destino está lá?
-    ausentes = sum(1 for r in registro if r["status"] in ("copiado", "ja_existia") and not Path(r["destino"]).exists())
+    no_destino = ("copiado", "ja_existia", "movido")
+    ausentes = sum(1 for r in registro if r["status"] in no_destino and not Path(r["destino"]).exists())
     primeiro = {}
     for r in registro:
-        if r["status"] in ("copiado", "ja_existia"):
+        if r["status"] in no_destino:
             nome = Path(r["destino"]).relative_to(destino).parts[0]
             primeiro[nome] = primeiro.get(nome, 0) + 1
     return {"copiados": copiados, "ignorados": ignorados, "erros": erros, "tags_gravadas": gravadas,
+            "movidos": movidos, "atualizados": atualizados, "pastas_vazias_removidas": pastas_vazias,
             "tags_falhas": falhas_tags, "log": str(arq_log), "capas_trocadas": capas_trocadas,
             "originais_alterados": originais_alterados, "ausentes": ausentes, "pasta_destino": str(destino),
             "revisao": revisao[:300], "revisao_total": len(revisao), "erros_detalhe": detalhes_erro[:50],

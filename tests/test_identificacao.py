@@ -520,6 +520,40 @@ def test_sugestao_de_genero_cruzada_album_pela_faixa_e_placeholders():
     srv.server_close()
 
 
+def test_recopiar_no_mesmo_destino_move_em_vez_de_duplicar():
+    from organizador import planejador
+    tmp = _tmp()
+    origem, destino = tmp / "o", tmp / "d"
+    origem.mkdir()
+    _mp3(origem / "x.mp3", {"title": "TORA", "artist": "Kura", "genre": "House"})
+    _mp3(origem / "y.mp3", {"title": "Outra", "artist": "Kura", "genre": "House"})
+    antes = {p.name: p.read_bytes() for p in origem.glob("*.mp3")}
+    fx = Faixa(caminho=str(origem / "x.mp3"), titulo="TORA", artista="Kura", genero="House", bpm=126, bpm_conf=9, camelot="8A", tom_conf=.1)
+    fy = Faixa(caminho=str(origem / "y.mp3"), titulo="Outra", artista="Kura", genero="House", bpm=128, bpm_conf=9, camelot="8A", tom_conf=.1)
+    r1 = planejador.executar(planejador.planejar([fx, fy], "A"), destino)
+    assert r1["copiados"] == 2 and (destino / "House/126 BPM/08A/Kura - TORA.mp3").is_file()
+    # rodar de novo sem mudar nada: nada é copiado nem duplicado (mesmo com as tags da cópia reescritas)
+    r2 = planejador.executar(planejador.planejar([fx, fy], "A"), destino)
+    assert (r2["copiados"], r2["movidos"], r2["ignorados"]) == (0, 0, 2) and len(list(destino.rglob("*.mp3"))) == 2
+    # o gênero de uma mudou: a cópia é MOVIDA para a pasta nova, a tag acompanha e a pasta vazia some
+    fx.genero = "Big Room"
+    r3 = planejador.executar(planejador.planejar([fx, fy], "A"), destino)
+    nova = destino / "Big Room/126 BPM/08A/Kura - TORA.mp3"
+    assert (r3["copiados"], r3["movidos"], r3["ignorados"]) == (0, 1, 1) and nova.is_file() and r3["ausentes"] == 0
+    assert not (destino / "House/126 BPM").exists() and len(list(destino.rglob("*.mp3"))) == 2
+    assert escrita._ler(nova)[0]["genre"] == "Big Room"
+    # música nova entra copiada; originais continuam intactos
+    _mp3(origem / "z.mp3", {"title": "Nova"})
+    fz = Faixa(caminho=str(origem / "z.mp3"), titulo="Nova", artista="Kura", genero="House", bpm=128, bpm_conf=9, camelot="8A", tom_conf=.1)
+    r4 = planejador.executar(planejador.planejar([fx, fy, fz], "A"), destino)
+    assert (r4["copiados"], r4["movidos"], r4["ignorados"]) == (1, 0, 2) and len(list(destino.rglob("*.mp3"))) == 3
+    assert {p.name: p.read_bytes() for p in origem.glob("*.mp3") if p.name != "z.mp3"} == antes
+    # destino organizado por uma versão antiga (sem índice): os registros antigos bastam para não duplicar
+    (destino / ".organizador" / "indice.json").unlink()
+    r5 = planejador.executar(planejador.planejar([fx, fy, fz], "A"), destino)
+    assert r5["copiados"] == 0 and len(list(destino.rglob("*.mp3"))) == 3
+
+
 def _esperar(E, limite=120):
     ini = time.time()
     while time.time() - ini < limite:

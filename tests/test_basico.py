@@ -164,7 +164,13 @@ def test_copia_segura():
     alvo = tmp / "d" / plano[0].destino
     alvo.write_bytes(b"outro conteudo maior")  # arquivo diferente no destino: nunca sobrescreve
     r3 = planejador.executar(plano, tmp / "d")
-    assert r3["copiados"] == 1 and alvo.read_bytes() == b"outro conteudo maior"
+    assert alvo.read_bytes() == b"outro conteudo maior" and r3["erros"] == 0
+    # destino que o programa nunca viu (sem registros) e com um arquivo diferente no caminho: copia ao lado, sem sobrescrever
+    outro = tmp / "d2" / plano[0].destino
+    outro.parent.mkdir(parents=True)
+    outro.write_bytes(b"arquivo de outra origem")
+    r4 = planejador.executar(plano, tmp / "d2")
+    assert r4["copiados"] == 1 and outro.read_bytes() == b"arquivo de outra origem" and len(list(outro.parent.iterdir())) == 2
     assert Path(r3["log"]).exists()
 
 

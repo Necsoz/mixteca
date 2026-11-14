@@ -219,7 +219,7 @@ button.ed:hover{border-color:var(--acc);color:var(--txt)}button.ed.u{color:var(-
 
 <section id="s3" class="off fora" data-p="4">
   <h2>Copiar para o destino</h2>
-  <p class="hint">Cria as pastas e <b>copia</b> as músicas. Se o arquivo já existir no destino, ele é pulado. Um registro do que foi feito fica salvo no destino.</p>
+  <p class="hint">Cria as pastas e <b>copia</b> as músicas. Se você já organizou antes neste mesmo destino, as cópias que mudaram de pasta são <b>movidas</b> (não duplicadas) e as que já estão no lugar são puladas. Um registro do que foi feito fica salvo no destino.</p>
   <div class="opts" style="margin-top:0"><label><input type="checkbox" id="gravar_tags" checked> Gravar nome, artista, álbum, gênero e capa encontrados <b>nas cópias</b> (as tags antigas ficam guardadas para desfazer)</label></div>
   <button class="go" id="b-copiar">Copiar músicas</button>
   <div class="res" id="res-copiar"></div>
@@ -297,7 +297,7 @@ async function terminou(job){
   if(job.tipo==="analisar"||job.tipo==="reanalisar"){await carregar(job.tipo==="analisar"); if(job.tipo==="analisar"&&r.ident) mostrarResultado(r.ident,r.ident_aviso); else if(job.tipo==="analisar"&&r.ident_aviso) mostrarResultado(null,r.ident_aviso); return}
   if(job.tipo==="identificar") return identificou(r);
   const alvo=job.tipo==="copiar"?"#res-copiar":"#res-melhorar"; const el=$(alvo); el.style.display="block";
-  if(job.tipo==="copiar"){ el.innerHTML=`<b class="ok">✔ Pronto.</b> ${r.copiados} copiadas, ${r.ignorados} já existiam, <span class="${r.erros?"bad":""}">${r.erros} com erro</span>.<br><small>Registro: ${esc(r.log)}</small> <button class="mini" id="b-ver-fim">Ver resumo</button>`; $("#b-ver-fim").onclick=()=>mostrarFim(r); mostrarFim(r); }
+  if(job.tipo==="copiar"){ el.innerHTML=`<b class="ok">✔ Pronto.</b> ${r.copiados} copiadas, ${r.movidos||0} movidas de pasta, ${r.ignorados} já estavam no lugar, <span class="${r.erros?"bad":""}">${r.erros} com erro</span>.<br><small>Registro: ${esc(r.log)}</small> <button class="mini" id="b-ver-fim">Ver resumo</button>`; $("#b-ver-fim").onclick=()=>mostrarFim(r); mostrarFim(r); }
   else el.innerHTML=`<b class="ok">✔ Pronto.</b> ${r.melhoradas} cópias melhoradas, ${r.ja_bom} já estavam boas, <span class="${r.erros?"bad":""}">${r.erros} com erro</span>.<br><small>Pasta: ${esc(r.pasta)}</small>${(r.mensagens||[]).map(m=>`<br><small class="bad">${esc(m)}</small>`).join("")}`;
 }
 
@@ -309,7 +309,7 @@ function mostrarFim(r){
   const rev=(r.revisao||[]);
   $("#fim-card").innerHTML=`<h2>${r.cancelado?'<span class="warn">Cópia cancelada</span>':ok?'<span class="ok">✔ Cópia concluída e conferida</span>':'<span class="warn">Cópia concluída, com avisos</span>'}</h2>`+
     `<div class="hint">Pasta: <b>${esc(r.pasta_destino)}</b></div>`+
-    `<div class="grade">${num(r.copiados,"músicas copiadas")}${num(r.ignorados,"já existiam (puladas)")}${num(r.tags_gravadas,"com nome e tags organizados")}${num(r.capas_trocadas,"capas colocadas/melhoradas")}`+
+    `<div class="grade">${num(r.copiados,"músicas copiadas")}${num(r.movidos||0,"movidas para a pasta nova")}${num(r.ignorados,"já estavam no lugar")}${num(r.tags_gravadas,"com nome e tags organizados")}${num(r.capas_trocadas,"capas colocadas/melhoradas")}`+
     `${num(r.revisao_total,"na pasta Revisão",r.revisao_total?"w":"")}${num(r.erros,"com erro",r.erros?"r":"")}</div>`+
     `<p class="hint">Conferência: ${r.ausentes?`<span class="bad">${r.ausentes} arquivo(s) não foram encontrados no destino.</span>`:'<span class="ok">todos os arquivos estão no destino.</span>'} `+
     `${r.originais_alterados?`<span class="bad">${r.originais_alterados} original(is) mudaram durante a cópia!</span>`:'<span class="ok">Os originais não foram alterados.</span>'}`+

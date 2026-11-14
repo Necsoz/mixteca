@@ -1,5 +1,7 @@
 # Mixteca
 
+**Português** · [English](README.en.md)
+
 Organizador de músicas para Windows, pensado para quem toca: lê o **BPM** e o **tom** de cada música direto do áudio, completa as informações que faltam pela internet e monta cópias organizadas em pastas por **gênero → BPM → tom (Camelot)**, para você achar rápido o que combina na hora de mixar.
 
 O Mixteca **só cria cópias**. As músicas originais nunca são movidas, alteradas ou apagadas.
@@ -12,7 +14,7 @@ O Mixteca **só cria cópias**. As músicas originais nunca são movidas, altera
 - **Completa as informações:** procura sozinho nome, artista, álbum, ano, gênero e capa do que estiver faltando.
 - **Respeita o que já existe:** tags preenchidas e plausíveis não são mexidas. Só é corrigido o que é claramente lixo (por exemplo, gênero "Unknown" ou nome de site no título).
 - **Sugere gênero** para as músicas que ficarem sem, cruzando outras músicas do mesmo artista, a sonoridade e a internet. Sugestões ficam marcadas como não confirmadas.
-- **Organiza em pastas** com prévia antes de copiar, em quatro padrões à escolha.
+- **Organiza em pastas** na ordem que você escolher, com prévia antes de copiar.
 - **Limpa nomes e tags nas cópias:** o arquivo vira `Artista - Título`, sem restos de vídeo ou de sites, e as tags ficam só com o que é útil. BPM e tom são gravados nas tags (mp3 e flac) para programas de DJ.
 - **Melhora o áudio (opcional):** iguala o volume entre as músicas, corta subgrave inaudível e segura picos, sempre em cópias separadas.
 - **Mostra o que combina:** na lista, clique numa música e veja as de tom compatível e BPM parecido.

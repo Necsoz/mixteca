@@ -276,7 +276,9 @@ def reaproveitar(saida, pedidos: list[tuple[str, str]], marca=None, refazer: boo
     por_nome: dict[str, list[Path]] | None = None
     usados: set[Path] = set()
     fazer: list[int] = []
-    for n, (origem, rel) in enumerate(pedidos):
+    for n, pedido in enumerate(pedidos):
+        origem, rel = pedido[0], pedido[1]
+        outros_nomes = list(pedido[2]) if len(pedido) > 2 else []  # nomes que o arquivo pode ter tido antes (ex.: sem o tom na frente)
         if refazer:
             fazer.append(n)
             continue
@@ -299,7 +301,8 @@ def reaproveitar(saida, pedidos: list[tuple[str, str]], marca=None, refazer: boo
                 for p in (saida.rglob("*") if saida.is_dir() else []):
                     if p.is_file() and ".organizador" not in p.parts:
                         por_nome.setdefault(p.name.casefold(), []).append(p)
-            achados = [p for p in por_nome.get(novo.name.casefold(), []) if p not in usados]
+            achados = [p for nome in dict.fromkeys([novo.name] + outros_nomes)
+                       for p in por_nome.get(nome.casefold(), []) if p not in usados]
             if len(achados) > 1:  # mesmo nome em mais de um lugar: só vale o que está no mesmo gênero (1ª pasta)
                 achados = [p for p in achados if p.relative_to(saida).parts[0] == Path(rel).parts[0]]
             velho = novo if novo.is_file() and novo not in usados else (achados[0] if len(achados) == 1 else None)

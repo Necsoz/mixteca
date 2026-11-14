@@ -156,6 +156,12 @@ def test_reaproveitar_pasta_de_melhoradas_antiga_sem_refazer():
     (origem / "a.mp3").write_bytes(b"arquivo baixado de novo, diferente")  # original trocado: essa é refeita
     assert planejador.reaproveitar(saida, pedidos[:2], -10.0)[0] == [0]
     assert planejador.reaproveitar(saida, pedidos[:2], -10.0, refazer=True)[0] == [0, 1]
+    # pasta antiga + opção nova de tom no nome do arquivo: ainda acha pelo nome antigo, move e renomeia
+    velha = tmp / "M2"
+    (velha / "Rock/100 BPM/01A").mkdir(parents=True)
+    (velha / "Rock/100 BPM/01A/Art - Z.mp3").write_bytes(b"melhorada z")
+    fz, cz, _ = planejador.reaproveitar(velha, [(str(origem / "b.mp3"), "Rock/100 BPM/01A - Art - Z.mp3", ["Art - Z.mp3"])], -10.0)
+    assert fz == [] and cz["movidos"] == 1 and (velha / "Rock/100 BPM/01A - Art - Z.mp3").read_bytes() == b"melhorada z"
 
 
 def test_ordem_de_pastas_montada_pelo_usuario():

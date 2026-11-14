@@ -286,7 +286,7 @@ def r_melhorar(c):
         cont = {"melhoradas": 0, "ja_bom": 0, "erros": 0, "mensagens": [], "pasta": str(saida)}
         # o que já foi melhorado antes é aproveitado: fica onde está ou é movido para a pasta nova, sem processar de novo
         rels = [Path(i.destino).with_suffix(_codec(Path(i.origem).suffix)[0]).as_posix() for i in itens]
-        fazer, aproveitado, indice = planejador.reaproveitar(saida, [(i.origem, r) for i, r in zip(itens, rels)], alvo, refazer)
+        fazer, aproveitado, indice = planejador.reaproveitar(saida, [(i.origem, r, [i.nome + Path(r).suffix]) for i, r in zip(itens, rels)], alvo, refazer)
         cont.update(reaproveitadas=aproveitado["no_lugar"] + aproveitado["movidos"], movidas=aproveitado["movidos"])
         cont["ja_bom"] += aproveitado["ja_bom"]
         feitos = len(itens) - len(fazer)

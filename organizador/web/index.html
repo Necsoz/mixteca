@@ -493,7 +493,7 @@ async function identificar(internet){
 function mostrarResultado(r,aviso){
   const el=$("#res-id"); el.style.display="block";
   const av=aviso?`<span class="warn">${esc(aviso)}</span><br>`:"";
-  if(!r){el.innerHTML=av;return}
+  if(!r){el.innerHTML=av||'<b class="ok">✔ Nada a buscar.</b> Todas as músicas já têm nome, artista, gênero e capa.';return}
   const at=r.autoteste&&r.autoteste.acuracia!=null?`<br><small>Sonoridade: acertou ${Math.round(100*r.autoteste.acuracia)}% ao tentar adivinhar o gênero de ${r.autoteste.n} músicas suas que já tinham gênero.</small>`:"";
   const conf=r.media+r.baixa+r.alta_pendente;
   el.innerHTML=av+`<b class="ok">✔ Pronto.</b> Pesquisei ${r.pesquisadas} músicas${r.ja_pesquisadas?` (${r.ja_pesquisadas} já estavam guardadas)`:""} e preenchi sozinho <b>${r.aplicadas_auto}</b> informações. `+

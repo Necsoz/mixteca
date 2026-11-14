@@ -490,19 +490,53 @@ def _atualizar_status(p: dict) -> None:
         p["status"] = "resolvida"
 
 
-def _alvos_identificacao(escopo: str, procurar_capa: bool = True) -> tuple[list, list]:
+def _medir_capas(faixas: list, progresso=None) -> None:
+    """Mede o tamanho da capa embutida das músicas (para saber se vale procurar uma melhor). É a parte lenta entre a
+    análise e a busca, então roda em paralelo, mostra o andamento e fica guardada em disco para as próximas vezes."""
+    arq = pasta_dados() / "capas-medidas.json"
+    if not E.lados_capa:
+        try:
+            E.lados_capa = json.loads(arq.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            E.lados_capa = {}
+
+    def chave(f):
+        try:
+            st = os.stat(f.caminho)
+            return f"{f.caminho}|{st.st_size}|{st.st_mtime_ns}"
+        except OSError:
+            return f.caminho
+
+    falta = [(f, chave(f)) for f in faixas]
+    falta = [(f, k) for f, k in falta if k not in E.lados_capa]
+    if falta:
+        feitos = 0
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            futuros = {pool.submit(capas.lado_embutido, f.caminho): k for f, k in falta}
+            for fut in as_completed(futuros):
+                E.lados_capa[futuros[fut]] = fut.result()
+                feitos += 1
+                if progresso and (feitos % 10 == 0 or feitos == len(falta)):
+                    progresso(feitos, len(falta), "Conferindo o tamanho das capas")
+                if E.cancelar.is_set():
+                    break
+        try:
+            arq.write_text(json.dumps(E.lados_capa), encoding="utf-8")
+        except OSError:
+            pass
+    for f in faixas:
+        E.lados_capa.setdefault(f.caminho, E.lados_capa.get(chave(f), 0))
+
+
+def _alvos_identificacao(escopo: str, procurar_capa: bool = True, progresso=None) -> tuple[list, list]:
     """(músicas incompletas, músicas completas cuja capa embutida é pequena e vale conferir se há uma melhor)."""
     base = [f for f in E.faixas if not f.erro and (escopo == "todas" or _precisa(f))]
     so_capa = []
     if procurar_capa:
         ja = {f.caminho for f in base}
-        for f in E.faixas:
-            if f.erro or not f.tem_capa or f.caminho in ja:
-                continue
-            if f.caminho not in E.lados_capa:
-                E.lados_capa[f.caminho] = capas.lado_embutido(f.caminho)
-            if 0 < E.lados_capa[f.caminho] < capas.LADO_BOM:
-                so_capa.append(f)
+        candidatas = [f for f in E.faixas if not f.erro and f.tem_capa and f.caminho not in ja]
+        _medir_capas(candidatas, progresso)
+        so_capa = [f for f in candidatas if 0 < E.lados_capa.get(f.caminho, 0) < capas.LADO_BOM]
     return base, so_capa
 
 
@@ -515,7 +549,7 @@ def _versao_online(cred: dict) -> int:
 def _identificar_tudo(progresso, internet: bool = True, escopo: str = "faltando", rotulo: str = "") -> dict | None:
     """Busca na internet (ou só pela sonoridade) o que falta, aplica o que é seguro e guarda o resto como sugestão."""
     cred = config.carregar_credenciais(E.pasta_config)
-    base, so_capa = _alvos_identificacao(escopo, cred["procurar_capa_melhor"] and internet)
+    base, so_capa = _alvos_identificacao(escopo, cred["procurar_capa_melhor"] and internet, progresso)
     alvos = base + so_capa
     modo_capa = {f.caminho for f in so_capa}
     if not alvos:
@@ -610,11 +644,9 @@ def r_identificar(c):
         raise Erro("Analise uma pasta primeiro.")
     internet = c.get("internet", True)
     escopo = "todas" if c.get("escopo") == "todas" else "faltando"
-    base, so_capa = _alvos_identificacao(escopo, internet and config.carregar_credenciais(E.pasta_config)["procurar_capa_melhor"])
-    if not base and not so_capa:
-        raise Erro("Todas as músicas já têm nome, artista, álbum, gênero e capa.")
+    # a medição das capas (lenta) acontece dentro da tarefa, com barra de andamento, e não aqui
     E.iniciar("identificar", lambda progresso: _identificar_tudo(progresso, internet, escopo))
-    return {"ok": True, "total": len(base) + len(so_capa)}
+    return {"ok": True}
 
 
 def r_propostas(_):

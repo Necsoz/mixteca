@@ -25,6 +25,20 @@ PADROES = {
 
 # níveis de pasta que o usuário pode combinar na ordem que quiser
 NIVEIS = {"genero": "Gênero", "bpm": "BPM", "camelot": "Tom (Camelot)", "artista": "Artista", "ano": "Ano"}
+NIVEIS_EN = {"genero": "Genre", "bpm": "BPM", "camelot": "Key (Camelot)", "artista": "Artist", "ano": "Year"}
+# nomes de pastas e motivos que o programa cria, por idioma (a chave é o texto em português)
+PASTAS_EN = {"Revisão": "Review", "Arquivo com erro": "File with error", "Sem gênero": "No genre", "BPM não detectado": "BPM not detected",
+             "Tom não detectado": "Key not detected", "BPM incerto": "Uncertain BPM", "Tom incerto": "Uncertain key",
+             "Sem artista": "No artist", "Sem ano": "No year", "Melhoradas": "Improved"}
+PASTAS_REVISAO = ("Revisão", "Review")
+
+
+def nome_pasta(texto: str, idioma: str = "pt") -> str:
+    return PASTAS_EN.get(texto, texto) if idioma == "en" else texto
+
+
+def nomes_niveis(idioma: str = "pt") -> dict:
+    return NIVEIS_EN if idioma == "en" else NIVEIS
 
 
 def validar_ordem(ordem) -> list[str] | None:
@@ -138,6 +152,7 @@ def planejar(
     grupos_proprios: dict | None = None,
     ordem: list | None = None,
     tom_no_nome: bool = False,
+    idioma: str = "pt",
 ) -> list[ItemPlano]:
     partes = validar_ordem(ordem) or PADROES[padrao][1]  # ordem montada pelo usuário vale mais que o modelo pronto
     usados: set[str] = set()
@@ -153,15 +168,15 @@ def planejar(
         if p == "camelot":
             return rotulo_camelot(f.camelot)
         if p == "artista":
-            return limpar_nome(artista_principal(f.artista)) if f.artista else "Sem artista"
+            return limpar_nome(artista_principal(f.artista)) if f.artista else nome_pasta("Sem artista", idioma)
         if p == "ano":
-            return f.ano[:4] if (f.ano or "")[:4].isdigit() else "Sem ano"
+            return f.ano[:4] if (f.ano or "")[:4].isdigit() else nome_pasta("Sem ano", idioma)
         return ""
 
     def contexto(f):  # pastas que vêm antes do BPM: os BPMs são juntados dentro de cada uma (ex.: dentro de cada gênero)
         return tuple(valor(f, p) for p in antes_do_bpm)
 
-    motivos = {f.caminho: _motivo_revisao(f, partes, min_bpm_conf, min_tom_conf, incluir_incertas) for f in faixas}
+    motivos = {f.caminho: nome_pasta(_motivo_revisao(f, partes, min_bpm_conf, min_tom_conf, incluir_incertas) or "", idioma) or None for f in faixas}
     rotulos_auto: dict[tuple, dict[int, str]] = {}
     if bpm_modo == "auto" and "bpm" in partes:
         contagens: dict[tuple, dict[int, int]] = {}
@@ -173,7 +188,7 @@ def planejar(
     for f in sorted(faixas, key=lambda x: x.caminho.lower()):
         motivo = motivos[f.caminho]
         if motivo:
-            pastas = ["Revisão", motivo]
+            pastas = [nome_pasta("Revisão", idioma), motivo]
         else:
             if f.bpm is None:
                 bpm = ""
@@ -430,5 +445,5 @@ def executar(plano: list[ItemPlano], destino, ao_progresso=None, cancelar=None, 
             "tags_falhas": falhas_tags, "log": str(arq_log), "capas_trocadas": capas_trocadas,
             "originais_alterados": originais_alterados, "ausentes": ausentes, "pasta_destino": str(destino),
             "revisao": revisao[:300], "revisao_total": len(revisao), "erros_detalhe": detalhes_erro[:50],
-            "primeiro_nivel": [{"nome": k, "qtd": v} for k, v in sorted(primeiro.items(), key=lambda kv: (kv[0] == "Revisão", kv[0].casefold()))],
+            "primeiro_nivel": [{"nome": k, "qtd": v} for k, v in sorted(primeiro.items(), key=lambda kv: (kv[0] in PASTAS_REVISAO, kv[0].casefold()))],
             "cancelado": bool(cancelar is not None and cancelar.is_set())}

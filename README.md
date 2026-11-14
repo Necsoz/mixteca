@@ -31,6 +31,8 @@ Como o instalador não tem assinatura digital, o Windows pode mostrar o aviso "O
 
 Para atualizar, rode o instalador novo por cima do antigo. Suas configurações são mantidas.
 
+**Idioma:** o programa tem Português (Brasil) e Inglês (EUA). Ele começa no idioma do Windows, e você troca quando quiser em **Idioma / Language**, no canto inferior esquerdo. Em inglês, as pastas que o programa cria também ficam em inglês (`Review`, `Improved`).
+
 Requisitos: Windows 10 ou 11. O programa abre em janela própria (WebView2); se o componente não existir, abre no navegador.
 
 ## Como usar

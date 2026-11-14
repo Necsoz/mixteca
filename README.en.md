@@ -8,7 +8,7 @@ Mixteca **only creates copies**. Your original files are never moved, changed or
 
 > Free for **noncommercial** use. See [License](#license).
 
-> The program's interface is currently in Brazilian Portuguese only. The button and section names below are shown as they appear on screen, with a translation.
+> The interface is available in English (US) and Portuguese (Brazil). It starts in your Windows language, and you can switch at any time under **Idioma / Language** in the bottom-left corner.
 
 ## What it does
 
@@ -24,10 +24,10 @@ Mixteca **only creates copies**. Your original files are never moved, changed or
 ## Installation
 
 1. Open the **Actions** tab of this repository.
-2. Choose **Gerar programa para Windows** ("Build the Windows program") and click **Run workflow**.
+2. Choose **Gerar programa para Windows** ("Build the Windows program", the workflow name) and click **Run workflow**.
 3. When it finishes, download from **Artifacts**:
-   - **Mixteca-Instalador** (`Mixteca-Setup.exe`): installs the program, creates shortcuts and includes an uninstaller.
-   - **Mixteca-Portatil**: runs straight from its folder, no installation.
+   - **Mixteca-Instalador** (`Mixteca-Setup.exe`): the installer. It installs the program, creates shortcuts and includes an uninstaller.
+   - **Mixteca-Portatil**: the portable version. It runs straight from its folder, no installation.
 
 The installer is not digitally signed, so Windows may show a "Windows protected your PC" warning. Click **More info** and then **Run anyway**.
 
@@ -39,35 +39,35 @@ Requirements: Windows 10 or 11. The program opens in its own window (WebView2); 
 
 The program is a four-step walkthrough.
 
-### 1. Pastas (Folders)
-Pick the folder with your music and a destination folder for the organized copies. Click **Analisar músicas** ("Analyze music"). The analysis is saved, so the second time is fast.
+### 1. Folders
+Pick the folder with your music and a destination folder for the organized copies. Click **Analyze music**. The analysis is saved, so the second time is fast.
 
-Before analyzing, you can open **Chaves e opções da busca na internet** ("Keys and internet search options") to enter optional keys (see [Information sources](#information-sources)).
+Before analyzing, you can open **Keys and internet search options** to enter optional keys (see [Information sources](#information-sources)).
 
-### 2. Conferir (Review)
-- **O que encontrei na internet** ("What I found online"): a summary of what was filled in automatically. **Buscar de novo** ("Search again") is for when the connection drops.
-- **Sugestões que o programa não teve certeza** ("Suggestions the program was not sure about"): changes it did not apply on its own. Accept or reject them one by one, or use **Aceitar as mostradas** / **Recusar as mostradas** ("Accept / Reject the ones shown"). The confidence filter decides what is in the list; low-confidence suggestions can only be accepted one by one.
-- **Suas músicas** ("Your music"): the full list. The pencil next to a genre changes that track's genre. The "sugestão" label marks an unconfirmed genre.
-- **Gêneros para conferir** ("Genres to review"): one row per track without a confirmed genre, with the suggestion and where it came from. Confirm one at a time or all at once.
+### 2. Review
+- **What I found online:** a summary of what was filled in automatically. **Search again** is for when the connection drops.
+- **Suggestions the program was not sure about:** changes it did not apply on its own. Accept or reject them one by one, or use **Accept the ones shown** / **Reject the ones shown**. The confidence filter decides what is in the list; low-confidence suggestions can only be accepted one by one.
+- **Your music:** the full list. The pencil next to a genre changes that track's genre. The "suggestion" label marks an unconfirmed genre.
+- **Genres to review:** one row per track without a confirmed genre, with the suggestion and where it came from. Confirm one at a time or all at once.
 
-### 3. Organizar (Organize)
+### 3. Organize
 - Build the **folder order** by dragging the blocks (or clicking them): Genre, BPM, Key (Camelot), Artist and Year, in any sequence. For example `Genre → BPM → Key` or `Key → BPM → Genre`. Ready-made templates are also available, with examples from your own music.
-- **Colocar o tom no começo do nome do arquivo** ("Put the key at the start of the file name"): instead of one subfolder per key, each file becomes `08A - Artist - Title`. Remove the Key block from the folder order and the tracks inside each folder sort in harmonic order.
-- **BPM nas pastas** ("BPM in folders"):
-  - *Automático:* merges neighbouring BPMs that have few tracks (up to 5 BPM apart), within each genre.
-  - *Exato:* one folder per BPM.
-  - *Em faixas fixas:* fixed-size ranges (2, 3, 5 or 10 BPM).
-- **Juntar gêneros próximos na mesma pasta** ("Put similar genres in the same folder"): for example, Tech House and Deep House go to "House". You can move any genre to another folder, create a new folder, and rename any folder (the pencil next to its name). The track's tag keeps the exact genre.
-- The **preview** shows the folders that will be created and lists the tracks going to **Revisão** ("Review"), with the reason for each (no genre, uncertain BPM or key).
+- **Put the key at the start of the file name:** instead of one subfolder per key, each file becomes `08A - Artist - Title`. Remove the Key block from the folder order and the tracks inside each folder sort in harmonic order.
+- **BPM in folders:**
+  - *Automatic:* merges neighbouring BPMs that have few tracks (up to 5 BPM apart), within each genre.
+  - *Exact:* one folder per BPM.
+  - *Fixed ranges:* fixed-size ranges (2, 3, 5 or 10 BPM).
+- **Put similar genres in the same folder:** for example, Tech House and Deep House go to "House". You can move any genre to another folder, create a new folder, and rename any folder (the pencil next to its name). The track's tag keeps the exact genre.
+- The **preview** shows the folders that will be created and lists the tracks going to **Review**, with the reason for each (no genre, uncertain BPM or key).
 
 Key folders use a leading zero (`01A`, `01B`, `02A`…), so they sort in Camelot wheel order in any program.
 
-### 4. Copiar (Copy)
-- **Copiar músicas** ("Copy music") creates the folders and the copies. A summary at the end confirms what was done.
-- **Melhorar o áudio** ("Improve audio") creates improved copies in the `Melhoradas` subfolder of the destination. You can choose only low-quality tracks, only tracks that clip, or all of them.
+### 4. Copy
+- **Copy music** creates the folders and the copies. A summary at the end confirms what was done.
+- **Improve the audio** creates improved copies in the `Improved` subfolder of the destination (`Melhoradas` when the program is in Portuguese). You can choose only low-quality tracks, only tracks that clip, or all of them.
 
 ### Organizing again into the same destination
-If you add music or change the options and organize again into the same destination, Mixteca does not duplicate anything: copies whose folder changed are **moved**, copies already in place are skipped, and only new tracks are copied. The same applies to the `Melhoradas` folder.
+If you add music or change the options and organize again into the same destination, Mixteca does not duplicate anything: copies whose folder changed are **moved**, copies already in place are skipped, and only new tracks are copied. The same applies to the `Improved` folder.
 
 ## Information sources
 

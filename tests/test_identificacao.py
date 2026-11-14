@@ -2,6 +2,7 @@
 Rodar: python tests/test_identificacao.py"""
 import json
 import subprocess
+import os
 import sys
 import tempfile
 import time
@@ -11,6 +12,7 @@ from pathlib import Path
 import numpy as np
 from scipy.io import wavfile
 
+os.environ.setdefault("MIXTECA_IDIOMA", "pt")  # os testes conferem os textos em português
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from organizador import casamento, config, decisao, escrita, identificacao, servidor  # noqa: E402
 from organizador.classificador import ClassificadorSom  # noqa: E402
@@ -570,6 +572,35 @@ def test_recusar_e_aceitar_em_lote_o_que_esta_na_lista():
     assert r["campos"] == 2 and servidor.r_propostas({})["propostas"] == []
     assert a.genero == "" and not a.ajustes                              # a sugestão que vinha do palpite recusado saiu junto
     assert servidor.r_decidir({"acao": "recusar", "todas": True})["campos"] == 0
+    srv.server_close()
+
+
+def test_servidor_em_ingles_mensagens_e_pagina():
+    tmp = _tmp()
+    srv = servidor.criar_servidor(0, tmp / "c.db", tmp)
+    E = servidor.E
+    assert servidor.r_config({})["idioma"] == "pt"
+    servidor.r_config_salvar({"idioma": "en"})
+    assert servidor.r_config({})["idioma"] == "en" and servidor._t("Analise uma pasta primeiro.") == "Analyze a folder first."
+    a = Faixa(caminho="/a.mp3", titulo="A", artista="X", genero="Big Room")
+    c = Faixa(caminho="/c.mp3", titulo="C", artista="X")
+    E.faixas = [a, c]
+    assert servidor._sugerir_generos() == 1
+    fx = next(f for f in servidor.r_faixas({})["faixas"] if f["caminho"] == "/c.mp3")
+    assert fx["sugerido"] and fx["genero_fonte"] == "suggestion: other tracks by the same artist"
+    assert servidor.r_conferir({})["itens"][0]["motivo"] == "other tracks by the same artist"
+    c.bpm, c.bpm_conf, c.camelot, c.tom_conf = 128, 0.5, "8A", .1
+    assert servidor.r_previa({"padrao": "A"})["revisao_itens"][0]["motivo"] in ("Uncertain BPM", "BPM not detected")
+    assert servidor.r_padroes({})["padroes"][0]["nome"] == "Genre → BPM → Key (Camelot)"
+    import urllib.request
+    threading_srv = __import__("threading").Thread(target=srv.serve_forever, daemon=True)
+    threading_srv.start()
+    pagina = urllib.request.urlopen(f"http://127.0.0.1:{srv.server_address[1]}/").read().decode("utf-8")
+    assert "Where is your music?" in pagina and "Onde estão suas músicas?" not in pagina
+    servidor.r_config_salvar({"idioma": "pt"})
+    pagina = urllib.request.urlopen(f"http://127.0.0.1:{srv.server_address[1]}/").read().decode("utf-8")
+    assert "Onde estão suas músicas?" in pagina
+    srv.shutdown()
     srv.server_close()
 
 

@@ -19,6 +19,8 @@ body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.5 "Segoe UI Vari
 #passos button.at span{background:var(--acc);border-color:var(--acc);color:var(--tinta)}
 #passos button:disabled{opacity:.45;cursor:not-allowed}
 #passos button:not(:disabled):hover{border-color:var(--bd);color:var(--txt)}
+.idioma{margin-top:auto;display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--mut);padding:0 8px 10px}
+.idioma select{flex:none;padding:6px 8px;font-size:13px}
 .rodape{margin-top:auto;color:var(--mut);font-size:12px;padding:0 8px;line-height:1.5}
 section.fora{display:none}
 #nav-passos{display:none;justify-content:space-between;gap:10px;margin:18px 0 0}
@@ -141,7 +143,9 @@ button.ed:hover{border-color:var(--acc);color:var(--txt)}button.ed.u{color:var(-
     <button data-p="3" disabled><span>3</span>Organizar</button>
     <button data-p="4" disabled><span>4</span>Copiar</button>
   </nav>
-  <div class="rodape">Nada é apagado nem movido: o Mixteca só cria cópias organizadas.</div>
+  <label class="idioma">Idioma / Language
+    <select id="idioma"><option value="pt">Português (Brasil)</option><option value="en">English (US)</option></select></label>
+  <div class="rodape" style="margin-top:0">Nada é apagado nem movido: o Mixteca só cria cópias organizadas.</div>
 </aside>
 <main class="wrap">
 <div class="erro" id="erro" role="alert"></div>
@@ -392,7 +396,7 @@ function prepararZonas(){
       const k=ev.dataTransfer.getData("text/plain"); if(!nomesNiveis[k]) return;
       const sem=niveis.filter(x=>x!==k);
       if(id==="#niveis-off") return mudarNiveis(sem);
-      let pos=sem.length;   // solta antes do primeiro bloco cujo meio está à direita do ponteiro
+      let pos=sem.length;   /* solta antes do primeiro bloco cujo meio está à direita do ponteiro */
       [...z.querySelectorAll(".nivel")].filter(c=>c.dataset.k!==k).some((c,i)=>{const r=c.getBoundingClientRect();if(ev.clientX<r.left+r.width/2&&ev.clientY<r.bottom){pos=i;return true}return false});
       sem.splice(pos,0,k); mudarNiveis(sem);
     };
@@ -460,7 +464,7 @@ function desenharTabela(){
     const bpm=f.erro?"":`${(f.bpm_conf<3||f.fora)?'<span class="u">~</span>':""}${f.bpm}`;
     const cam=f.erro?`<span class="bad" title="${esc(f.erro)}">erro</span>`:`<span class="cam" style="background:${corCam(f.camelot)}" title="${esc(f.tom)}">${f.camelot}</span>${f.tom_conf<0.01?'<span class="u" title="tom incerto"> ?</span>':""}`;
     const cl=i===selecionada?"sel":compat(faixas[selecionada],f)?"comp":"";
-    return `<tr class="m ${cl}" data-i="${i}"><td title="${esc(f.caminho)}">${esc(nome)}</td><td>${esc(f.album||"—")}</td><td class="tg" title="${esc(f.genero_fonte?"fonte: "+f.genero_fonte:"")}">${esc(f.genero||"—")}${(f.genero_fonte||"").startsWith("sugestão")?' <span class="sug" title="'+esc(f.genero_fonte)+' (não confirmado)">sugestão</span>':""}${f.erro?"":` <button class="ed ${(f.genero_manual||(f.ajustes&&f.ajustes.includes("genero")))?"u":""}" data-e="${i}" title="Trocar o gênero desta música">✎</button>`}${f.ajustes&&f.ajustes.some(a=>a!=="genero")?' <span class="u" title="completado pelo programa: '+esc(f.ajustes.join(", "))+'">•</span>':""}</td><td>${bpm}</td><td>${cam}</td><td>${f.baixa?'<span class="u" title="Agudos cortados em '+Math.round((f.corte_hz||0)/1000)+' kHz">⚠ baixa</span>':'<span class="ok">ok</span>'}</td></tr>`}).join("")+
+    return `<tr class="m ${cl}" data-i="${i}"><td title="${esc(f.caminho)}">${esc(nome)}</td><td>${esc(f.album||"—")}</td><td class="tg" title="${esc(f.genero_fonte?"fonte: "+f.genero_fonte:"")}">${esc(f.genero||"—")}${f.sugerido?' <span class="sug" title="'+esc(f.genero_fonte)+' (não confirmado)">sugestão</span>':""}${f.erro?"":` <button class="ed ${(f.genero_manual||(f.ajustes&&f.ajustes.includes("genero")))?"u":""}" data-e="${i}" title="Trocar o gênero desta música">✎</button>`}${f.ajustes&&f.ajustes.some(a=>a!=="genero")?' <span class="u" title="completado pelo programa: '+esc(f.ajustes.join(", "))+'">•</span>':""}</td><td>${bpm}</td><td>${cam}</td><td>${f.baixa?'<span class="u" title="Agudos cortados em '+Math.round((f.corte_hz||0)/1000)+' kHz">⚠ baixa</span>':'<span class="ok">ok</span>'}</td></tr>`}).join("")+
     (lista.length>600?`<tr><td colspan="6" class="hint">Mostrando 600 de ${lista.length}. Use a busca para filtrar.</td></tr>`:"");
   document.querySelectorAll("#corpo button.ed").forEach(b=>b.onclick=ev=>{ev.stopPropagation();editarGenero(+b.dataset.e,b.closest("td"))});
   document.querySelectorAll("#corpo tr.m").forEach(tr=>tr.onclick=()=>{const i=+tr.dataset.i;selecionada=selecionada===i?null:i;desenharTabela()});
@@ -607,6 +611,8 @@ const loteNivel=()=>$("#f-nivel").value?{nivel:$("#f-nivel").value}:{todas:true}
 $("#b-ac-todas").onclick=()=>decidir({acao:"aceitar",...loteNivel()},true); $("#b-rec-todas").onclick=()=>decidir({acao:"recusar",...loteNivel()},true);
 $("#bpm_modo").onchange=mudouOpcao; $("#bpm_tam").onchange=mudouOpcao; $("#incertas").onchange=mudouOpcao; $("#agrupar").onchange=salvarAgrupar; $("#tom_nome").onchange=async()=>{try{await api("/api/config",{tom_no_nome:$("#tom_nome").checked})}catch(e){} mudouOpcao()};
 $("#busca").oninput=desenharTabela; $("#b-conf-todas").onclick=()=>confirmarGeneros(semGenero.map((g,i)=>g.genero?i:-1).filter(i=>i>=0));
+$("#idioma").value="__IDIOMA__";
+$("#idioma").onchange=async()=>{try{await api("/api/config",{idioma:$("#idioma").value});location.reload()}catch(e){erro(e.message)}};
 document.querySelectorAll("#passos button").forEach(b=>b.onclick=()=>irPasso(+b.dataset.p));
 $("#b-voltar").onclick=()=>irPasso(passo-1); $("#b-avancar").onclick=()=>irPasso(passo+1);
 prepararZonas(); recordar(); carregarConfig().catch(()=>{}); irPasso(1);

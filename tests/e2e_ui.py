@@ -6,6 +6,7 @@ import tempfile
 import threading
 from pathlib import Path
 
+os.environ.setdefault("MIXTECA_IDIOMA", "pt")  # os testes conferem os textos em português
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from playwright.sync_api import sync_playwright  # noqa: E402
 

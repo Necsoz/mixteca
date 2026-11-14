@@ -6,7 +6,7 @@ from pathlib import Path
 
 from . import limpeza
 
-_SEP_ARTISTAS = re.compile(r"\s*(?:/|;|,|&|\bfeat\.?|\bft\.?|\bfeaturing\b|\bvs\.?|\bx\b|\band\b)\s*", re.I)
+_SEP_ARTISTAS = re.compile(r"\s*(?:/|;|,|&|\bfeat\.?|\bft\.?|\bfeaturing\b|\bvs\.?|(?-i:(?<=\s)x(?=\s))|\band\b)\s*", re.I)
 _VERSOES = re.compile(r"[\(\[][^\)\]]*(?:mix|edit|version|remaster|feat|ft\.|bootleg|remix|radio|extended|original)[^\)\]]*[\)\]]", re.I)
 
 

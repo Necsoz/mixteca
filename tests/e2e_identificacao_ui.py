@@ -1,8 +1,10 @@
 """Navegador + internet SIMULADA: analisar -> identificar -> conferir -> aceitar -> copiar com tags. Uso: python tests/e2e_identificacao_ui.py PASTA_PRINTS"""
+import os
 import sys
 import threading
 from pathlib import Path
 
+os.environ.setdefault("MIXTECA_IDIOMA", "pt")  # os testes conferem os textos em português
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from playwright.sync_api import sync_playwright  # noqa: E402

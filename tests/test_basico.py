@@ -1,5 +1,6 @@
 """Testes automáticos. Rodar: python tests/test_basico.py   (ou: python -m pytest tests)"""
 import subprocess
+import os
 import sys
 import tempfile
 from pathlib import Path
@@ -7,6 +8,7 @@ from pathlib import Path
 import numpy as np
 from scipy.io import wavfile
 
+os.environ.setdefault("MIXTECA_IDIOMA", "pt")  # os testes conferem os textos em português
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from organizador import planejador  # noqa: E402
 from organizador.analise import analisar_arquivo  # noqa: E402
@@ -183,6 +185,36 @@ def test_ordem_de_pastas_montada_pelo_usuario():
     # só o que está na ordem pode mandar para a Revisão: sem tom detectado não importa se o tom não é pasta
     sem.camelot = None
     assert not planejador.planejar([sem], "A", ordem=["genero", "bpm"])[0].revisao
+
+
+def test_idiomas_tela_e_mensagens():
+    import re
+    from organizador import i18n
+    html = (Path(__file__).resolve().parent.parent / "organizador" / "web" / "index.html").read_text(encoding="utf-8")
+    # todo trecho em português da lista de tradução precisa existir na página (senão a tradução ficou para trás)
+    orfaos = [pt for pt, _ in i18n.TELA_EN if pt not in html]
+    assert not orfaos, orfaos[:3]
+    assert i18n.tela(html, "pt").replace("pt", "") == html.replace("__IDIOMA__", "pt").replace("pt", "")   # português: página intacta
+    en = i18n.tela(html, "en")
+    corpo = re.sub(r"/\*.*?\*/", "", en[en.index("<body>"):], flags=re.S)
+    sobras = [m.group(0) for m in re.finditer(r"[^\n]{0,30}[áàâãéêíóôõúçÁÉÍÓÚÇ][^\n]{0,30}", corpo) if "Português" not in m.group(0) and "//" not in m.group(0)]
+    assert not sobras, sobras[:3]                                   # nada em português sobrando na tela em inglês
+    assert '<html lang="en-US">' in en and "Where is your music?" in en and '$("#idioma").value="en"' in en
+    assert 'a==="Review"?1' in en and "__IDIOMA__" not in en
+    # mensagens do servidor
+    t = lambda x: i18n.tr(x, "en")  # noqa: E731
+    assert t("Analise uma pasta primeiro.") == "Analyze a folder first." and i18n.tr("Analise uma pasta primeiro.", "pt") == "Analise uma pasta primeiro."
+    assert t("A pasta das músicas não existe: E:\\x") == "The folder does not exist: E:\\x"
+    assert t("sugestão: outras músicas do mesmo artista + sonoridade parecida") == "suggestion: other tracks by the same artist + similar sound"
+    assert t("a sonoridade lembra Techno; confira") == "the sound resembles Techno; please check"
+    assert t("palpite fraco pela sonoridade; o gênero gravado não fazia sentido") == "weak guess based on the sound; the stored genre did not make sense"
+    assert t("Beatport + som") == "Beatport + sound" and t("Texto qualquer") == "Texto qualquer" and t(None) is None
+    # pastas e motivos em inglês
+    a = Faixa(caminho="/x/a.mp3", titulo="T", artista="A", genero="", bpm=128, bpm_conf=9, camelot="8A", tom_conf=.1)
+    b = Faixa(caminho="/x/b.mp3", titulo="T", genero="Big Room", bpm=128, bpm_conf=9, camelot="8A", tom_conf=.1)
+    assert planejador.planejar([a], "A", idioma="en")[0].destino == "Review/No genre/A - T.mp3" and planejador.planejar([a], "A")[0].destino.startswith("Revisão/Sem gênero/")
+    assert planejador.planejar([b], "A", ordem=["artista", "ano"], idioma="en")[0].destino == "No artist/No year/b.mp3"
+    assert planejador.nomes_niveis("en")["camelot"] == "Key (Camelot)" and i18n.escolher("en") == "en" and i18n.escolher("xx") in i18n.IDIOMAS
 
 
 def test_planejador_padroes():

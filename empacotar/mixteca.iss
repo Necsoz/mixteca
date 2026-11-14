@@ -21,6 +21,7 @@ WizardStyle=modern
 
 [Languages]
 Name: "ptbr"; MessagesFile: "compiler:Languages\BrazilianPortuguese.isl"
+Name: "en"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"

@@ -17,7 +17,7 @@ from pathlib import Path
 
 import urllib.parse
 
-from . import ajustes, config, extras, identificacao, limpeza, planejador
+from . import ajustes, config, i18n, extras, identificacao, limpeza, planejador
 from .analise import analisar_arquivo
 from .camelot import nome_tom
 from .classificador import ClassificadorSom
@@ -100,6 +100,19 @@ def _pasta_valida(texto: str, nome: str) -> Path:
     return p
 
 
+def _idioma() -> str:
+    return i18n.escolher(config.carregar_credenciais(E.pasta_config)["idioma"] if E else "")
+
+
+def _t(texto):
+    """Mensagem do servidor no idioma escolhido."""
+    return i18n.tr(texto, _idioma())
+
+
+# nomes das pastas de grupos padrão em inglês (o usuário pode renomear qualquer uma)
+_GRUPOS_EN = {"sertanejo and brasil": "Brazilian", "eletronica outros": "Electronic (other)", "classica and trilha": "Classical & Soundtrack", "latina": "Latin"}
+
+
 def _renomes(cred: dict) -> dict:
     try:
         d = json.loads(cred.get("pastas_renomeadas") or "{}")
@@ -111,7 +124,8 @@ def _renomes(cred: dict) -> dict:
 def _grupos_proprios() -> dict:
     """Grupos de gêneros escolhidos pelo usuário + nomes que ele deu às pastas."""
     cred = config.carregar_credenciais(E.pasta_config)
-    return {**ler_grupos(cred["grupos_pastas"]), RENOMEAR: _renomes(cred)}
+    padrao = _GRUPOS_EN if i18n.escolher(cred["idioma"]) == "en" else {}
+    return {**ler_grupos(cred["grupos_pastas"]), RENOMEAR: {**padrao, **_renomes(cred)}}
 
 
 def _parametros_plano(c: dict) -> dict:
@@ -122,6 +136,7 @@ def _parametros_plano(c: dict) -> dict:
         "padrao": padrao,
         "ordem": planejador.validar_ordem(c.get("ordem")),
         "tom_no_nome": bool(c.get("tom_no_nome")),
+        "idioma": _idioma(),
         "bpm_modo": c.get("bpm_modo") if c.get("bpm_modo") in ("faixas", "auto") else "exato",
         "bpm_tam": max(2, min(20, int(c.get("bpm_tam") or 5))),
         "incluir_incertas": bool(c.get("incluir_incertas")),
@@ -154,10 +169,25 @@ def r_analisar(c):
 
 def r_estado(_):
     with E.lock:
-        return {"job": {**E.job, "pausado": E.pausa.is_set()}, "n_faixas": len(E.faixas), "origem": E.origem}
+        job = {**E.job, "pausado": E.pausa.is_set()}
+    idioma = _idioma()
+    if idioma != "pt":  # mensagens que vão para a tela, no idioma escolhido
+        job["atual"], job["erro"] = i18n.tr(job["atual"], idioma), i18n.tr(job["erro"], idioma)
+        res = job.get("resultado")
+        if isinstance(res, dict):
+            res = dict(res)
+            for bloco in (res, res.get("ident")):
+                if isinstance(bloco, dict):
+                    for k in ("ident_aviso", "aviso_som"):
+                        if bloco.get(k):
+                            bloco[k] = i18n.tr(bloco[k], idioma)
+            job["resultado"] = res
+    return {"job": job, "n_faixas": len(E.faixas), "origem": E.origem}
 
 
 def r_faixas(_):
+    idioma = _idioma()
+    idioma_tr = lambda t: i18n.tr(t, idioma)  # noqa: E731
     saida = []
     for f in E.faixas:
         saida.append({
@@ -166,7 +196,7 @@ def r_faixas(_):
             "tom": nome_tom(f.tom_pc, f.tom_menor) if f.tom_pc is not None else "", "tom_conf": f.tom_conf,
             "corte_hz": f.corte_hz, "baixa": f.qualidade_baixa, "pico_db": f.pico_db, "erro": f.erro,
             "fora": f.bpm_fora_da_faixa, "genero_manual": f.genero_manual,
-            "album": f.album or f.titulo, "album_da_faixa": bool(not f.album and f.titulo), "ano": f.ano, "genero_fonte": f.genero_fonte, "tem_capa": f.tem_capa,
+            "album": f.album or f.titulo, "album_da_faixa": bool(not f.album and f.titulo), "ano": f.ano, "genero_fonte": idioma_tr(f.genero_fonte), "sugerido": _sugerido(f), "tem_capa": f.tem_capa,
             "ajustes": sorted(f.ajustes),
         })
     return {"faixas": saida}
@@ -184,12 +214,14 @@ def r_padroes(c):
         raise Erro("Analise uma pasta primeiro.")
     base = {k: v for k, v in _parametros_plano(c).items() if k not in ("padrao", "ordem")}
     saida = []
-    for pid, (nome, _) in planejador.PADROES.items():
+    nomes = planejador.nomes_niveis(base["idioma"])
+    for pid in planejador.PADROES:
         plano = planejador.planejar(E.faixas, padrao=pid, **base)
         exemplos = [i.destino for i in plano if not i.revisao][:3]
         pastas = {i.destino.rsplit("/", 1)[0] for i in plano if not i.revisao}
-        saida.append({"id": pid, "nome": nome, "exemplos": exemplos, "pastas": len(pastas), "ordem": planejador.PADROES[pid][1]})
-    return {"padroes": saida, "niveis": planejador.NIVEIS}
+        ordem = planejador.PADROES[pid][1]
+        saida.append({"id": pid, "nome": " → ".join(nomes[n] for n in ordem), "exemplos": exemplos, "pastas": len(pastas), "ordem": ordem})
+    return {"padroes": saida, "niveis": nomes}
 
 
 def r_previa(c):
@@ -277,7 +309,7 @@ def r_melhorar(c):
     alvo = float(c.get("alvo_lufs") or -10)
     if not -20 <= alvo <= -5:
         raise Erro("Volume alvo fora do intervalo permitido.")
-    saida = destino / "Melhoradas"
+    saida = destino / planejador.nome_pasta("Melhoradas", _idioma())
 
     refazer = bool(c.get("refazer"))
 
@@ -471,7 +503,7 @@ def _treinar() -> dict:
 
 def r_config(c):
     cred = config.carregar_credenciais(E.pasta_config)
-    return {"contato": cred["contato"], "tem_acoustid": bool(cred["acoustid"]), "tem_lastfm": bool(cred["lastfm"]), "tem_discogs": bool(cred["discogs"]), "ordem_pastas": [n for n in cred["ordem_pastas"].split(",") if n], "tom_no_nome": cred["tom_no_nome"], "grupos_pastas": cred["grupos_pastas"], "agrupar_generos": cred["agrupar_generos"], "procurar_capa_melhor": cred["procurar_capa_melhor"],
+    return {"contato": cred["contato"], "tem_acoustid": bool(cred["acoustid"]), "tem_lastfm": bool(cred["lastfm"]), "tem_discogs": bool(cred["discogs"]), "ordem_pastas": [n for n in cred["ordem_pastas"].split(",") if n], "idioma": i18n.escolher(cred["idioma"]), "tom_no_nome": cred["tom_no_nome"], "grupos_pastas": cred["grupos_pastas"], "agrupar_generos": cred["agrupar_generos"], "procurar_capa_melhor": cred["procurar_capa_melhor"],
             "aplicar_alta_automatico": cred["aplicar_alta_automatico"], "fpcalc": acoustid.disponivel(),
             "pasta_dados": str(E.pasta_config or pasta_dados())}
 
@@ -484,6 +516,8 @@ def r_config_salvar(c):
     for k in ("aplicar_alta_automatico", "procurar_capa_melhor", "agrupar_generos", "tom_no_nome"):
         if k in c:
             novos[k] = bool(c[k])
+    if c.get("idioma") in i18n.IDIOMAS:
+        novos["idioma"] = c["idioma"]
     if "ordem_pastas" in c:
         novos["ordem_pastas"] = ",".join(planejador.validar_ordem(c["ordem_pastas"]) or [])
     if "grupos_pastas" in c:
@@ -677,17 +711,19 @@ def r_identificar(c):
 
 
 def r_propostas(_):
+    idioma = _idioma()
     nomes = {f.caminho: f for f in E.faixas}
     saida = []
     for p in E.cache.propostas_todas():
         f = nomes.get(p["caminho"])
         if f is None or p["status"] != "pendente":
             continue
-        campos = {k: v for k, v in p["campos"].items() if not (v.get("aplicado") or v.get("recusado"))}
+        campos = {k: {**v, "fonte": i18n.tr(v.get("fonte"), idioma), "nota": i18n.tr(v.get("nota"), idioma)}
+                  for k, v in p["campos"].items() if not (v.get("aplicado") or v.get("recusado"))}
         if not campos:
             continue
         saida.append({"caminho": p["caminho"], "arquivo": Path(p["caminho"]).name, "titulo": f.titulo, "artista": f.artista,
-                      "campos": campos, "faltando": p["faltando"], "identificacao": p["identificacao"]})
+                      "campos": campos, "faltando": [i18n.tr(x, idioma) for x in p["faltando"]], "identificacao": p["identificacao"]})
     ordem = {"alta": 0, "media": 1, "baixa": 2}
     saida.sort(key=lambda p: (min(ordem[v["nivel"]] for v in p["campos"].values()), p["arquivo"].casefold()))
     resumo = {"identificadas": sum(1 for f in E.faixas if f.ajustes), "pendentes": len(saida)}
@@ -753,7 +789,7 @@ def r_conferir(_):
             continue
         nome = f"{f.artista} — {f.titulo}" if f.artista and f.titulo else (f.titulo or Path(f.caminho).stem)
         itens.append({"caminho": f.caminho, "nome": nome, "arquivo": Path(f.caminho).name, "genero": f.genero,
-                      "motivo": (f.genero_fonte or "").replace("sugestão: ", "") if f.genero else ""})
+                      "motivo": _t((f.genero_fonte or "").replace("sugestão: ", "")) if f.genero else ""})
     itens.sort(key=lambda i: (not i["genero"], i["nome"].casefold()))
     conhecidos = sorted({f.genero for f in E.faixas if f.genero} | set(GENEROS_COMUNS))
     return {"itens": itens, "generos": conhecidos}
@@ -851,7 +887,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._capa(partes.query)
         self.path = partes.path
         if self.path in ("/", "/index.html"):
-            html = (WEB / "index.html").read_text(encoding="utf-8").replace("__TOKEN__", TOKEN)
+            html = i18n.tela((WEB / "index.html").read_text(encoding="utf-8"), _idioma()).replace("__TOKEN__", TOKEN)
             return self._enviar(200, html.encode("utf-8"), "text/html; charset=utf-8")
         return self._rota(ROTAS_GET.get(self.path), {})
 
@@ -867,16 +903,16 @@ class Handler(BaseHTTPRequestHandler):
 
     def _rota(self, funcao, corpo):
         if funcao is None:
-            return self._json(404, {"erro": "Não encontrado."})
+            return self._json(404, {"erro": _t("Não encontrado.")})
         if not self._autorizado():
-            return self._json(403, {"erro": "Acesso negado."})
+            return self._json(403, {"erro": _t("Acesso negado.")})
         E.ultimo_sinal = time.monotonic()
         try:
             self._json(200, funcao(corpo))
         except Erro as e:
-            self._json(400, {"erro": str(e)})
+            self._json(400, {"erro": _t(str(e))})
         except Exception as e:  # noqa: BLE001
-            self._json(500, {"erro": f"Erro inesperado: {e}"})
+            self._json(500, {"erro": _t(f"Erro inesperado: {e}")})
 
 
 class Servidor(ThreadingHTTPServer):

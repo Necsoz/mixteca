@@ -26,6 +26,7 @@ _INVALIDOS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 
 
 def limpar_nome(texto: str) -> str:
+    texto = re.sub(r"\s*[/\\]\s*", " - ", texto)  # "Alternative/Indie" vira "Alternative - Indie" (barra não pode em nome de pasta)
     limpo = _INVALIDOS.sub("_", texto).strip().rstrip(". ")
     return limpo or "_"
 

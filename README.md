@@ -51,7 +51,7 @@ Antes de analisar, você pode abrir **Chaves e opções da busca na internet** p
   - *Automático:* junta BPMs vizinhos que têm poucas músicas (até 5 BPM de diferença), dentro de cada gênero.
   - *Exato:* uma pasta por BPM.
   - *Em faixas fixas:* intervalos de tamanho fixo (2, 3, 5 ou 10 BPM).
-- **Juntar gêneros próximos na mesma pasta:** por exemplo, Tech House e Deep House vão para "House". Você pode mover qualquer gênero para outra pasta ou criar uma pasta nova. A tag da música continua com o gênero exato.
+- **Juntar gêneros próximos na mesma pasta:** por exemplo, Tech House e Deep House vão para "House". Você pode mover qualquer gênero para outra pasta, criar uma pasta nova e renomear qualquer pasta (o lápis ao lado do nome). A tag da música continua com o gênero exato.
 - A **prévia** mostra as pastas que serão criadas e lista as músicas que vão para **Revisão**, com o motivo de cada uma (sem gênero, BPM ou tom incerto).
 
 As pastas de tom usam zero à esquerda (`01A`, `01B`, `02A`…), então ficam na ordem da roda harmônica em qualquer programa.

@@ -166,7 +166,24 @@ def mover_grupo(texto: str, genero: str, pasta: str) -> str:
     return "\n".join(f"{p}: {', '.join(gs)}" for p, gs in grupos.items() if gs)
 
 
-def grupo(genero: str, proprios: dict[str, str] | None = None) -> str:
+RENOMEAR = "__renomear__"  # chave especial dentro dos grupos próprios: {chave da pasta: nome novo}
+
+
+def grupo(genero: str, proprios: dict | None = None) -> str:
+    """Pasta do gênero, já com o nome que o usuário deu à pasta (se ele renomeou)."""
+    pasta = _grupo_base(genero, proprios)
+    return ((proprios or {}).get(RENOMEAR) or {}).get(chave(pasta), pasta)
+
+
+def renomear_pasta(renomes: dict[str, str], de: str, para: str) -> dict[str, str]:
+    """Devolve o mapa de nomes com a pasta `de` (nome que aparece hoje) passando a se chamar `para`."""
+    para = re.sub(r"[:=,;\n\r]", " ", para or "").strip()[:60]
+    novo = {k: (para if chave(v) == chave(de) else v) for k, v in (renomes or {}).items()}
+    novo[chave(de)] = para
+    return {k: v for k, v in novo.items() if v and chave(v) != k}  # voltar ao nome original apaga a regra
+
+
+def _grupo_base(genero: str, proprios: dict | None = None) -> str:
     """Família do gênero (ex.: Riddim -> Dubstep, Tech House -> House). Sem família conhecida, devolve o próprio gênero.
     Os grupos escolhidos pelo usuário (`proprios`) valem antes dos padrões. Deathstep e Tearout ficam em pastas próprias."""
     k = chave(genero)

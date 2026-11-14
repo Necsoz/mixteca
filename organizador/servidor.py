@@ -29,7 +29,7 @@ from .provedores import acoustid, capas
 from .rede import Cliente, ErroRede
 from .escrita import gravar as gravar_tags_copia
 from .store import Cache
-from .taxonomia import Taxonomia, grupo as grupo_genero, ler_grupos, mover_grupo
+from .taxonomia import RENOMEAR, Taxonomia, grupo as grupo_genero, ler_grupos, mover_grupo, renomear_pasta
 
 WEB = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent.parent)) / "organizador" / "web"
 TOKEN = secrets.token_urlsafe(24)
@@ -100,6 +100,20 @@ def _pasta_valida(texto: str, nome: str) -> Path:
     return p
 
 
+def _renomes(cred: dict) -> dict:
+    try:
+        d = json.loads(cred.get("pastas_renomeadas") or "{}")
+        return {str(k): str(v) for k, v in d.items()} if isinstance(d, dict) else {}
+    except ValueError:
+        return {}
+
+
+def _grupos_proprios() -> dict:
+    """Grupos de gêneros escolhidos pelo usuário + nomes que ele deu às pastas."""
+    cred = config.carregar_credenciais(E.pasta_config)
+    return {**ler_grupos(cred["grupos_pastas"]), RENOMEAR: _renomes(cred)}
+
+
 def _parametros_plano(c: dict) -> dict:
     padrao = c.get("padrao", "A")
     if padrao not in planejador.PADROES:
@@ -110,7 +124,7 @@ def _parametros_plano(c: dict) -> dict:
         "bpm_tam": max(2, min(20, int(c.get("bpm_tam") or 5))),
         "incluir_incertas": bool(c.get("incluir_incertas")),
         "agrupar_generos": bool(c.get("agrupar_generos")),
-        "grupos_proprios": ler_grupos(config.carregar_credenciais(E.pasta_config)["grupos_pastas"]),
+        "grupos_proprios": _grupos_proprios(),
     }
 
 
@@ -211,7 +225,7 @@ def r_copiar(c):
 
 def r_grupos(_):
     """Gêneros da biblioteca e a pasta em que cada um cai com "juntar gêneros próximos" ligado."""
-    proprios = ler_grupos(config.carregar_credenciais(E.pasta_config)["grupos_pastas"])
+    proprios = _grupos_proprios()
     conta: dict[str, int] = {}
     for f in E.faixas:
         if not f.erro and f.genero:
@@ -227,6 +241,15 @@ def r_grupos_mover(c):
         raise Erro("Escolha um gênero.")
     cred = config.carregar_credenciais(E.pasta_config)
     config.salvar_credenciais({"grupos_pastas": mover_grupo(cred["grupos_pastas"], genero, str(c.get("pasta") or ""))}, E.pasta_config)
+    return r_grupos({})
+
+
+def r_grupos_renomear(c):
+    de, para = str(c.get("de") or "").strip(), str(c.get("para") or "").strip()
+    if not de or not para:
+        raise Erro("Escreva o novo nome da pasta.")
+    cred = config.carregar_credenciais(E.pasta_config)
+    config.salvar_credenciais({"pastas_renomeadas": json.dumps(renomear_pasta(_renomes(cred), de, para), ensure_ascii=False)}, E.pasta_config)
     return r_grupos({})
 
 
@@ -772,7 +795,7 @@ ROTAS_POST = {
     "/api/pasta": r_pasta, "/api/analisar": r_analisar, "/api/padroes": r_padroes, "/api/previa": r_previa,
     "/api/definir-genero": r_definir_genero, "/api/copiar": r_copiar, "/api/melhorar": r_melhorar, "/api/cancelar": r_cancelar,
     "/api/config": r_config_salvar, "/api/identificar": r_identificar, "/api/decidir": r_decidir,
-    "/api/desfazer": r_desfazer, "/api/pausar": r_pausar, "/api/abrir-pasta": r_abrir_pasta, "/api/grupos-mover": r_grupos_mover, "/api/genero-faixa": r_genero_faixa,
+    "/api/desfazer": r_desfazer, "/api/pausar": r_pausar, "/api/abrir-pasta": r_abrir_pasta, "/api/grupos-mover": r_grupos_mover, "/api/grupos-renomear": r_grupos_renomear, "/api/genero-faixa": r_genero_faixa,
 }
 
 

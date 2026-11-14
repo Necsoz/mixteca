@@ -201,7 +201,7 @@ button.ed:hover{border-color:var(--acc);color:var(--txt)}button.ed.u{color:var(-
     <label><input type="checkbox" id="incertas"> Colocar também as incertas nas pastas (em vez de “Revisão”)</label>
   </div>
   <div id="grupos-box" style="display:none;margin-top:12px">
-    <p class="hint" style="margin-bottom:8px">Como os seus gêneros ficaram agrupados. Para mudar, use a setinha ao lado do gênero: mande para outra pasta ou crie uma <b>nova pasta</b>. A prévia abaixo atualiza na hora.</p>
+    <p class="hint" style="margin-bottom:8px">Como os seus gêneros ficaram agrupados. Para mudar, use a setinha ao lado do gênero: mande para outra pasta ou crie uma <b>nova pasta</b>. O lápis ao lado do nome <b>renomeia</b> a pasta. A prévia abaixo atualiza na hora.</p>
     <div id="grupos-lista"></div>
   </div>
   <div class="tree" id="tree"></div>
@@ -457,10 +457,15 @@ async function carregarGrupos(){
   const pastas=[...new Set(gruposDados.map(g=>g.pasta))].sort(natural);
   $("#grupos-lista").innerHTML=pastas.map(p=>{
     const gs=gruposDados.filter(g=>g.pasta===p), total=gs.reduce((a,g)=>a+g.qtd,0);
-    return `<div class="gp"><div class="gt">📁 ${esc(p)} <span class="q">${total} música${total===1?"":"s"}</span></div><div class="gc">`+gs.map(g=>{
+    return `<div class="gp"><div class="gt">📁 ${esc(p)} <button class="ed" data-r="${pastas.indexOf(p)}" title="Renomear esta pasta" aria-label="Renomear a pasta ${esc(p)}">✎</button> <span class="q">${total} música${total===1?"":"s"}</span></div><div class="gc">`+gs.map(g=>{
       const i=gruposDados.indexOf(g);
       return `<span class="gchip ${g.proprio?"pr":""}" title="${g.proprio?"você mudou este gênero de pasta":""}">${esc(g.genero)} <small>${g.qtd}</small><select data-i="${i}" aria-label="Mover ${esc(g.genero)}"><option value="">mover ▾</option>`+
         pastas.map((x,j)=>x===p?"":`<option value="p${j}">→ ${esc(x)}</option>`).join("")+`<option value="nova">➕ Nova pasta…</option>${g.proprio?'<option value="padrao">↩ Voltar ao padrão</option>':""}</select></span>`}).join("")+`</div></div>`}).join("")||'<p class="hint">Nenhuma música com gênero ainda.</p>';
+  document.querySelectorAll("#grupos-lista button[data-r]").forEach(b=>b.onclick=async()=>{
+    const de=pastas[+b.dataset.r], para=(prompt("Novo nome da pasta:",de)||"").trim();
+    if(!para||para===de) return;
+    try{await api("/api/grupos-renomear",{de,para});await mudouOpcao()}catch(e){erro(e.message)}
+  });
   document.querySelectorAll("#grupos-lista select").forEach(sel=>sel.onchange=async()=>{
     const v=sel.value, g=gruposDados[+sel.dataset.i]; let pasta="";
     if(v==="nova"){pasta=(prompt(`Nome da nova pasta para "${g.genero}":`)||"").trim(); if(!pasta){sel.value="";return}}

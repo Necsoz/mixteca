@@ -87,6 +87,19 @@ def test_agrupar_generos_proximos_na_pasta_sem_mudar_a_tag():
     m = ler_grupos(txt)
     assert grupo("Electro House", m) == grupo("Progressive House", m) == "Electro & Prog" and txt.count("\n") == 0, txt
     assert mover_grupo(mover_grupo(txt, "Electro House", ""), "Progressive House", "House") == ""   # voltar ao padrão limpa tudo
+    # renomear pastas: uma criada pelo usuário e uma padrão; renomear de novo e voltar ao nome original
+    from organizador.taxonomia import RENOMEAR, renomear_pasta
+    m = ler_grupos(mover_grupo("", "Indie Rock", "Alternative/Indie"))
+    ren = renomear_pasta({}, "Alternative/Indie", "Alternative/Indie/Pop")
+    ren = renomear_pasta(ren, "House", "Casa")
+    m[RENOMEAR] = ren
+    assert grupo("Indie Rock", m) == "Alternative/Indie/Pop" and grupo("Tech House", m) == "Casa" and grupo("Riddim", m) == "Dubstep"
+    m[RENOMEAR] = renomear_pasta(ren, "Casa", "House Music")
+    assert grupo("Deep House", m) == "House Music"
+    m[RENOMEAR] = renomear_pasta(m[RENOMEAR], "House Music", "House")
+    assert grupo("Deep House", m) == "House" and "house" not in m[RENOMEAR]
+    fr = Faixa(caminho="/x/i.mp3", titulo="T", artista="A", genero="Indie Rock", bpm=120, bpm_conf=9, camelot="8A", tom_conf=.1)
+    assert planejador.planejar([fr], "D", agrupar_generos=True, grupos_proprios=m)[0].destino.startswith("Alternative - Indie - Pop/")
 
 
 def test_melhoria_aguenta_medicao_fora_da_faixa():

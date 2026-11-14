@@ -17,7 +17,7 @@ MODELO_PREFERENCIAS = {
     "artistas_dica": [],     # [{"artistas": [...], "genero": "...", "anos": [2011, 2016], "converter": [...]}]
     "limpar_termos": [],     # nomes de sites/programas que aparecem nos títulos e devem ser tirados (ex.: "nomedosite")
 }
-CREDENCIAIS_PADRAO = {"contato": "", "acoustid": "", "lastfm": "", "discogs": "", "grupos_pastas": "", "agrupar_generos": False, "aplicar_alta_automatico": True, "procurar_capa_melhor": True}
+CREDENCIAIS_PADRAO = {"contato": "", "acoustid": "", "lastfm": "", "discogs": "", "grupos_pastas": "", "pastas_renomeadas": "", "agrupar_generos": False, "aplicar_alta_automatico": True, "procurar_capa_melhor": True}
 _CHAVES_CRED = set(CREDENCIAIS_PADRAO)
 
 

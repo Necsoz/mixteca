@@ -42,6 +42,7 @@ Antes de analisar, você pode abrir **Chaves e opções da busca na internet** p
 
 ### 2. Conferir
 - **O que encontrei na internet:** resumo do que foi preenchido sozinho. O botão **Buscar de novo** serve para quando a conexão cair.
+- **Sugestões que o programa não teve certeza:** trocas que ele não aplicou sozinho. Aceite ou recuse uma a uma, ou use **Aceitar as mostradas** e **Recusar as mostradas** (o filtro de confiança define o que está na lista; as de baixa confiança só são aceitas uma a uma).
 - **Suas músicas:** a lista completa. O lápis ao lado do gênero troca o gênero daquela música. A etiqueta "sugestão" indica gênero não confirmado.
 - **Gêneros para conferir:** uma linha por música sem gênero confirmado, com a sugestão e de onde ela veio. Confirme uma a uma ou todas de uma vez.
 

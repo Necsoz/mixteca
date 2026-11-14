@@ -554,6 +554,25 @@ def test_recopiar_no_mesmo_destino_move_em_vez_de_duplicar():
     assert r5["copiados"] == 0 and len(list(destino.rglob("*.mp3"))) == 3
 
 
+def test_recusar_e_aceitar_em_lote_o_que_esta_na_lista():
+    tmp = _tmp()
+    srv = servidor.criar_servidor(0, tmp / "c.db", tmp)
+    E = servidor.E
+    a, b = Faixa(caminho="/a.mp3", titulo="A", artista="X"), Faixa(caminho="/b.mp3", titulo="B", artista="Y", genero="Rock")
+    E.faixas = [a, b]
+    campo = lambda novo, nivel, alt=False: {"atual": "", "novo": novo, "fonte": "som", "conf": .5, "nivel": nivel, "alteracao": alt, "nota": ""}  # noqa: E731
+    E.cache.propostas_salvar([{"caminho": "/a.mp3", "status": "pendente", "campos": {"genero": campo("Techno", "baixa")}, "faltando": [], "identificacao": {}},
+                              {"caminho": "/b.mp3", "status": "pendente", "campos": {"genero": campo("Big Room", "media", True), "ano": campo("2015", "baixa")}, "faltando": [], "identificacao": {}}])
+    assert servidor._sugerir_generos() == 1 and a.genero == "Techno" and a.genero_fonte.startswith("sugestão")
+    r = servidor.r_decidir({"acao": "aceitar", "todas": True})           # aceita só a de média; as de baixa ficam
+    assert r["campos"] == 1 and b.genero == "Big Room" and b.ano == ""
+    r = servidor.r_decidir({"acao": "recusar", "todas": True})           # recusa tudo que sobrou na lista
+    assert r["campos"] == 2 and servidor.r_propostas({})["propostas"] == []
+    assert a.genero == "" and not a.ajustes                              # a sugestão que vinha do palpite recusado saiu junto
+    assert servidor.r_decidir({"acao": "recusar", "todas": True})["campos"] == 0
+    srv.server_close()
+
+
 def _esperar(E, limite=120):
     ini = time.time()
     while time.time() - ini < limite:

@@ -701,8 +701,9 @@ def r_decidir(c):
         raise Erro("Sugestões de baixa confiança precisam ser conferidas e aceitas uma a uma.")
     sel = set(c.get("caminhos") or [])
     campos_sel = set(c.get("campos") or [])
-    if not sel and not nivel:
+    if not sel and not nivel and not c.get("todas"):
         raise Erro("Nada selecionado.")
+    em_lote = not sel  # em lote, baixa confiança nunca é aceita (só uma a uma)
     por_caminho = {f.caminho: f for f in E.faixas}
     sobre = E.cache.sobrescritas()
     mudadas, afetadas, n = [], [], 0
@@ -712,13 +713,22 @@ def r_decidir(c):
             continue
         esc = {k: v for k, v in p["campos"].items()
                if not (v.get("aplicado") or v.get("recusado")) and (not campos_sel or k in campos_sel)
-               and (not nivel or v["nivel"] == nivel)}
+               and (not nivel or v["nivel"] == nivel) and not (acao == "aceitar" and em_lote and v["nivel"] == "baixa")}
         if not esc:
             continue
         if acao == "aceitar":
             ajustes.registrar(E.cache, sobre, f, esc)
             if "genero" in esc:
                 afetadas.append(f)
+        if acao == "recusar" and "genero" in esc and _sugerido(f) and f.genero == E.tax.normalizar(esc["genero"]["novo"]):
+            ov = sobre.get(f.caminho)  # o palpite recusado tinha virado sugestão de gênero: a sugestão sai junto
+            if ov and "genero" in ov["campos"]:
+                f.genero = ov["campos"].pop("genero").get("anterior", "")
+                f.genero_fonte = "tag" if f.genero else ""
+                if not ov["campos"]:
+                    sobre.pop(f.caminho, None)
+                E.cache.sobrescrita_salvar(f.caminho, ov if ov["campos"] else None)
+                ajustes.aplicar_em_faixa(f, ov if ov["campos"] else None)
         for v in esc.values():
             v["aplicado" if acao == "aceitar" else "recusado"] = True
         n += len(esc)

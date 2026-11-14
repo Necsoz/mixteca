@@ -1,6 +1,6 @@
 # Gera o programa para Windows na nuvem do GitHub (grátis para repositórios públicos).
 # Como usar: aba "Actions" > "Gerar programa para Windows" > "Run workflow".
-# Receita ainda NÃO testada no GitHub: se algum passo falhar, copie o erro e peça ajuda.
+
 name: Gerar programa para Windows
 on: [workflow_dispatch]
 jobs:

@@ -1,67 +1,127 @@
 # Mixteca
 
-Programa pessoal para organizar músicas em pastas por **gênero → BPM → tom (Camelot)** e achar o que combina na hora de tocar.
+Organizador de músicas para Windows, pensado para quem toca: lê o **BPM** e o **tom** de cada música direto do áudio, completa as informações que faltam pela internet e monta cópias organizadas em pastas por **gênero → BPM → tom (Camelot)**, para você achar rápido o que combina na hora de mixar.
 
-## Como instalar
+O Mixteca **só cria cópias**. As músicas originais nunca são movidas, alteradas ou apagadas.
 
-Na aba **Actions** do repositório, rode **Gerar programa para Windows** e baixe o resultado **Mixteca-Instalador** (`Mixteca-Setup.exe`). Ele instala o programa, cria os atalhos e tem desinstalador. Também há a versão **Mixteca-Portatil**, que roda sem instalar. O programa abre em janela própria (usa o WebView2 do Windows 10/11; sem ele, abre no navegador).
+> Uso gratuito para fins **não comerciais**. Veja [Licença](#licença).
 
-- Lê o **BPM e o tom direto do áudio** (sem tocar as músicas) e o gênero das tags que já existem.
-- Músicas **sem gênero nas tags** aparecem num painel agrupadas por artista: você escolhe o gênero (vale para todas as músicas dele), e o BPM é recalculado já com o gênero. O gênero fica guardado só no programa; os arquivos não são alterados.
-- Mostra **4 padrões de pastas** aplicados às suas próprias músicas, com prévia, para escolher antes de copiar.
-- **Só copia.** Os originais nunca são movidos, alterados ou apagados; nada é sobrescrito; fica um registro (log) no destino.
-- Músicas em que não tem certeza (sem gênero, BPM duvidoso…) vão para a pasta **Revisão**.
-- Melhoria de áudio **opcional e leve** (volume parecido, corte de subgrave inaudível, limitador de picos), sempre em **cópias** na pasta `Melhoradas`.
-- **Identificação na internet (automática):** depois de analisar, o programa já busca sozinho (sem e-mail, sem chave, sem clique) e completa **nome, artista, álbum/single, ano, gênero e capa** das músicas incompletas. Detalhes na seção abaixo.
-- Tela da biblioteca: clique numa música e veja as que combinam (tom compatível + BPM parecido).
+## O que ele faz
 
-## Identificação e metadados (v0.3)
-**Como decide.** Para cada música incompleta: (1) usa as tags e o nome do arquivo (`Artista - Título`) e a duração; (2) busca no **MusicBrainz** e, se você tiver chave gratuita do **AcoustID** e o `fpcalc` na pasta `ferramentas/`, também reconhece pelo som; (3) pega capa oficial no **Cover Art Archive** (só imagem frontal de boa resolução; sem capa confiável, não aplica nada); (4) opcionalmente cruza gêneros com o **Last.fm** (chave gratuita). Nada é pesquisado de novo (cache em `%APPDATA%\Mixteca`), o ritmo respeita os limites de cada serviço e dá para pausar, cancelar e continuar de onde parou.
+- **Analisa o áudio:** BPM (sempre inteiro) e tom na notação Camelot, sem precisar tocar as músicas.
+- **Completa as informações:** procura sozinho nome, artista, álbum, ano, gênero e capa do que estiver faltando.
+- **Respeita o que já existe:** tags preenchidas e plausíveis não são mexidas. Só é corrigido o que é claramente lixo (por exemplo, gênero "Unknown" ou nome de site no título).
+- **Sugere gênero** para as músicas que ficarem sem, cruzando outras músicas do mesmo artista, a sonoridade e a internet. Sugestões ficam marcadas como não confirmadas.
+- **Organiza em pastas** com prévia antes de copiar, em quatro padrões à escolha.
+- **Limpa nomes e tags nas cópias:** o arquivo vira `Artista - Título`, sem restos de vídeo ou de sites, e as tags ficam só com o que é útil. BPM e tom são gravados nas tags (mp3 e flac) para programas de DJ.
+- **Melhora o áudio (opcional):** iguala o volume entre as músicas, corta subgrave inaudível e segura picos, sempre em cópias separadas.
+- **Mostra o que combina:** na lista, clique numa música e veja as de tom compatível e BPM parecido.
 
-**Confiança.** *Alta* (título, artista e duração batem): aplicada sozinha apenas em campos que estavam vazios (dá para desligar). *Média*: aparece para você conferir e aceitar (individual ou em lote). *Baixa*: só aceita uma a uma. Trocas de informação que já existia sempre pedem conferência. Cada sugestão mostra valor atual, valor novo, fonte e nível.
+## Instalação
 
-**Gênero por música.** Vem das tags de gênero da internet quando a música foi identificada com segurança; senão, de um classificador que compara a **sonoridade** com as músicas da *sua* biblioteca que já têm gênero (com autoteste de acerto mostrado na tela). Nunca copia o gênero do artista para todas as músicas dele. Sem evidência suficiente, usa o gênero mais abrangente sustentado ou deixa em branco.
+1. Abra a aba **Actions** deste repositório.
+2. Escolha **Gerar programa para Windows** e clique em **Run workflow**.
+3. Quando terminar, baixe em **Artifacts**:
+   - **Mixteca-Instalador** (`Mixteca-Setup.exe`): instala, cria atalhos e tem desinstalador.
+   - **Mixteca-Portatil**: roda direto da pasta, sem instalar.
 
-**Segurança.** Os originais nunca são alterados. Os dados novos só são gravados nas **cópias** (tags e capa via FFmpeg), e as tags anteriores ficam registradas no log do destino. Tudo pode ser desfeito na tela da biblioteca.
+Como o instalador não tem assinatura digital, o Windows pode mostrar o aviso "O Windows protegeu o computador". Clique em **Mais informações** e **Executar assim mesmo**.
 
-**Preferências pessoais (opcional, locais).** Regras como "agrupar subgêneros" ou "artistas X de 2011–2016 = Big Room" ficam em `user_preferences.json` dentro de `%APPDATA%\Mixteca`, **fora do programa e do repositório** (está no `.gitignore`). Sem esse arquivo o programa usa a classificação padrão; não há opção na tela para alternar. As chaves de API ficam em `credenciais.json`, também local.
+Para atualizar, rode o instalador novo por cima do antigo. Suas configurações são mantidas.
 
-**Fontes extras locais (opcional).** Quem quiser pode somar outras fontes de gênero colocando arquivos `.py` na pasta `extras` dentro de `%APPDATA%\Mixteca`. Elas não fazem parte deste repositório, e cada pessoa é responsável por respeitar os termos de uso de qualquer serviço que usar. Sem nenhum arquivo ali, o programa usa só MusicBrainz, Cover Art Archive e, se você informar chave, AcoustID, Last.fm e Discogs.
+Requisitos: Windows 10 ou 11. O programa abre em janela própria (WebView2); se o componente não existir, abre no navegador.
 
-**Nomes e tags profissionais (nas cópias).** O arquivo copiado vira `Artista - Título.mp3`, sem endereços de sites e restos de vídeo ("Official Video", "www...", "320kbps"...); nomes de sites sem endereço você pode listar em `limpar_termos` nas suas preferências locais; versões como "Original Mix" e créditos de remix ficam. Em mp3, flac e m4a as tags são refeitas só com o que é útil (título, artista, álbum, gênero, ano, faixa...), sem comentários nem "encoded by", e BPM e tom (Camelot) são gravados para programas de DJ (mp3 e flac). As pastas de tom usam zero à esquerda (`01A`, `01B`, `02A`...), então qualquer visualizador as deixa na ordem da roda harmônica, com os tons que combinam por perto.
+## Como usar
 
-**Prioridade para o que já vem na música.** Gênero, título, artista e álbum já gravados e plausíveis não são mexidos. Só é corrigido sozinho o gênero que é lixo (nome de site, número, "unknown"...). Se a tag diz algo de outra família (ex.: Rock numa faixa de Big Room), vira sugestão para você conferir. A capa só é trocada quando a da internet é bem maior que a embutida.
+O programa é um passo a passo de quatro etapas.
 
-**Limitações.** Remixes, bootlegs e faixas novas podem não existir nos bancos abertos. O código das fontes online foi testado com respostas simuladas, não com os serviços reais. O Discogs é opcional e exige um token gratuito.
+### 1. Pastas
+Escolha a pasta das suas músicas e uma pasta de destino para as cópias organizadas. Clique em **Analisar músicas**. A análise fica guardada: da segunda vez é rápida.
 
-## Limites (o que ele não faz)
-- O **BPM** é sempre inteiro e é confiável na maioria dos casos. O **tom é uma estimativa**: costuma acertar ou cair numa vizinha da roda Camelot (que ainda combina na mixagem), mas pode errar. Confira nas pastas que mais usa.
-- Não recupera o que um MP3 de baixa qualidade já perdeu: só avisa (⚠ qualidade baixa).
-- A melhoria de áudio não mexe em distorção nem timbre. A cópia é um MP3 novo de alta qualidade.
+Antes de analisar, você pode abrir **Chaves e opções da busca na internet** para informar chaves opcionais (veja [Fontes de informação](#fontes-de-informação)).
 
-## Rodar pelo código (precisa de Python 3.12+ e FFmpeg)
+### 2. Conferir
+- **O que encontrei na internet:** resumo do que foi preenchido sozinho. O botão **Buscar de novo** serve para quando a conexão cair.
+- **Suas músicas:** a lista completa. O lápis ao lado do gênero troca o gênero daquela música. A etiqueta "sugestão" indica gênero não confirmado.
+- **Gêneros para conferir:** uma linha por música sem gênero confirmado, com a sugestão e de onde ela veio. Confirme uma a uma ou todas de uma vez.
+
+### 3. Organizar
+- Escolha o **padrão de pastas** (os exemplos usam suas próprias músicas).
+- **BPM nas pastas:**
+  - *Automático:* junta BPMs vizinhos que têm poucas músicas (até 5 BPM de diferença), dentro de cada gênero.
+  - *Exato:* uma pasta por BPM.
+  - *Em faixas fixas:* intervalos de tamanho fixo (2, 3, 5 ou 10 BPM).
+- **Juntar gêneros próximos na mesma pasta:** por exemplo, Tech House e Deep House vão para "House". Você pode mover qualquer gênero para outra pasta ou criar uma pasta nova. A tag da música continua com o gênero exato.
+- A **prévia** mostra as pastas que serão criadas e lista as músicas que vão para **Revisão**, com o motivo de cada uma (sem gênero, BPM ou tom incerto).
+
+As pastas de tom usam zero à esquerda (`01A`, `01B`, `02A`…), então ficam na ordem da roda harmônica em qualquer programa.
+
+### 4. Copiar
+- **Copiar músicas** cria as pastas e as cópias. No fim aparece um resumo com a conferência do que foi feito.
+- **Melhorar o áudio** gera cópias melhoradas na subpasta `Melhoradas` do destino. Dá para escolher só as de qualidade baixa, só as que estouram ou todas.
+
+### Organizar de novo no mesmo destino
+Se você adicionar músicas ou mudar as opções e organizar outra vez no mesmo destino, o Mixteca não duplica nada: as cópias que mudaram de pasta são **movidas**, as que já estão no lugar são puladas e só as novas são copiadas. O mesmo vale para a pasta `Melhoradas`.
+
+## Fontes de informação
+
+Sem configurar nada, o Mixteca usa o **MusicBrainz** (dados das músicas) e o **Cover Art Archive** (capas). Chaves gratuitas opcionais melhoram o resultado:
+
+| Serviço | Para quê | Como obter |
+|---|---|---|
+| Discogs | estilos mais detalhados; identifica músicas que o MusicBrainz não tem | conta em discogs.com → Settings → Developers → gerar token |
+| Last.fm | gêneros marcados pela comunidade | conta em last.fm → criar uma "API account" |
+| AcoustID | reconhece a música pelo som, mesmo sem nome nem tags | conta em acoustid.org → registrar uma aplicação |
+
+As chaves ficam guardadas só no seu computador. Esses serviços têm termos próprios e são gratuitos apenas para uso não comercial.
+
+**Níveis de confiança.** O que é encontrado com confiança alta ou média preenche sozinho os campos vazios. Palpites fracos viram sugestões para você decidir. Trocar uma informação que já existia sempre pede sua confirmação.
+
+## Segurança dos seus arquivos
+
+- Os originais nunca são alterados. Tags, capas e nomes novos vão apenas para as cópias.
+- Nada é sobrescrito ou apagado no destino. Ao reorganizar, o programa só move cópias que ele mesmo criou e remove pastas que ficaram vazias.
+- Cada cópia fica registrada em `.organizador` dentro do destino, com as tags anteriores.
+- O programa roda só no seu computador. A internet é usada apenas para consultar as fontes acima, enviando nome, artista e duração da música (e a impressão digital do áudio, se o AcoustID estiver ligado).
+
+## Limites
+
+- O **tom é uma estimativa**. Costuma acertar ou cair num tom vizinho na roda Camelot, mas pode errar. Confira nas pastas que mais usa.
+- Remixes, bootlegs e lançamentos recentes podem não existir nas fontes abertas.
+- A melhoria de áudio não recupera o que um MP3 de baixa qualidade já perdeu, nem corrige distorção gravada.
+- No BPM automático, os nomes das pastas dependem das músicas que existem e podem mudar quando você adiciona músicas (as cópias são movidas para acompanhar).
+
+## Onde ficam os dados
+
+Configurações, chaves e análises ficam em `%APPDATA%\Mixteca`. Erros são registrados em `mixteca.log` nessa pasta. Desinstalar o programa não apaga essa pasta.
+
+Opções avançadas, por arquivo nessa mesma pasta:
+- `user_preferences.json`: regras próprias de nomes de gênero e palavras extras para limpar dos títulos.
+- `extras\*.py`: fontes de gênero adicionais. Quem adiciona é responsável por respeitar os termos de uso do serviço consultado, e só deve colocar ali arquivos em que confia.
+
+## Para desenvolvedores
+
+Requer Python 3.12+ e FFmpeg/FFprobe (na pasta `ferramentas/` ou no PATH).
+
 ```
 pip install -r requirements.txt
 python iniciar.py
 ```
-O FFmpeg/FFprobe devem estar na pasta `ferramentas/` ao lado do programa ou no PATH.
 
-## Gerar o .exe do Windows
-Use a receita `.github/workflows/build-windows.yml` (GitHub → Actions → “Gerar programa para Windows” → Run workflow). Ainda não foi testada no GitHub.
+Testes:
 
-## Testes
 ```
-python tests/test_basico.py        # unitários (CPU, ~1 min)
-python tests/test_identificacao.py # identificação, gêneros, preferências, gravação em cópias (internet simulada)
-python tests/e2e_identificacao_ui.py PASTA_PRINTS # fluxo completo no navegador
-python tests/e2e_ui.py PASTA_MP3 PASTA_PRINTS   # (e tests/e2e_generos.py) ponta a ponta no navegador (precisa de playwright)
+python tests/test_basico.py
+python tests/test_identificacao.py
+python tests/e2e_identificacao_ui.py PASTA_PRINTS   # fluxo na tela (precisa do Playwright)
 ```
 
-## Estrutura
-`organizador/analise.py` BPM, tom e qualidade · `planejador.py` padrões de pasta e cópia segura · `melhoria.py` cadeia FFmpeg · `servidor.py` + `web/index.html` interface · `identificacao.py`, `decisao.py`, `casamento.py`, `classificador.py`, `taxonomia.py`, `config.py`, `escrita.py`, `provedores/` identificação e metadados · `store.py` cache SQLite em `%APPDATA%\Mixteca`.
+O pacote do Windows é gerado por `.github/workflows/build-windows.yml` (PyInstaller + Inno Setup). As licenças das peças de terceiros estão em `LICENCAS.md`.
+
+Estrutura: `organizador/analise.py` (BPM, tom, qualidade) · `identificacao.py`, `decisao.py`, `casamento.py`, `classificador.py`, `provedores/` (busca e decisão de metadados) · `planejador.py` (pastas e cópia segura) · `escrita.py` (tags nas cópias) · `melhoria.py` (áudio) · `servidor.py` + `web/index.html` (interface).
 
 ## Licença
 
-Este projeto usa a **PolyForm Noncommercial License 1.0.0** (veja `LICENSE`): você pode usar, estudar e modificar o programa para fins **não comerciais** (pessoal, hobby, pesquisa, ensino, instituições sem fins lucrativos). **Vender o programa, incluí-lo em produto ou serviço pago ou usá-lo comercialmente exige autorização do autor.** Não é uma licença "open source" no sentido estrito, porque proíbe uso comercial.
+**PolyForm Noncommercial License 1.0.0** (arquivo `LICENSE`). Você pode usar, estudar e modificar o programa para fins não comerciais: uso pessoal, hobby, pesquisa, ensino e organizações sem fins lucrativos. **Vender o programa, incluí-lo em produto ou serviço pago ou usá-lo comercialmente exige autorização do autor.**
 
-As peças de terceiros (FFmpeg, numpy, scipy etc.) seguem as licenças delas, listadas em `LICENCAS.md`. O programa é fornecido como está, sem garantia.
+O programa é fornecido como está, sem garantia. As peças de terceiros (FFmpeg, numpy, scipy e outras) seguem as licenças delas.

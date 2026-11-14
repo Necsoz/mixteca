@@ -89,6 +89,22 @@ def test_agrupar_generos_proximos_na_pasta_sem_mudar_a_tag():
     assert mover_grupo(mover_grupo(txt, "Electro House", ""), "Progressive House", "House") == ""   # voltar ao padrão limpa tudo
 
 
+def test_melhoria_aguenta_medicao_fora_da_faixa():
+    from organizador import melhoria
+    bom = {"input_i": "-8.5", "input_tp": "0.4", "input_lra": "5.1", "input_thresh": "-18.6", "target_offset": "0.3"}
+    assert melhoria._medidas_validas(bom)
+    for chave, valor in [("input_i", "0.62"), ("input_i", "-inf"), ("input_thresh", "inf"), ("input_lra", "nan"), ("target_offset", None)]:
+        assert not melhoria._medidas_validas({**bom, chave: valor}), (chave, valor)
+    assert melhoria._numero({"input_i": "-inf"}, "input_i", -99.0) == -99.0
+    # arquivo real altíssimo (onda quadrada no talo): a medição passa de 0 LUFS e a cópia sai mesmo assim
+    import subprocess, tempfile
+    tmp = Path(tempfile.mkdtemp())
+    alto = tmp / "alto.wav"
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "aevalsrc=exprs='4*sgn(sin(2*PI*1000*t))':d=6:s=44100", "-c:a", "pcm_f32le", str(alto)], check=True)
+    r = melhoria.melhorar(alto, tmp / "saida" / "alto.wav")
+    assert r["status"] == "melhorado" and Path(r["destino"]).stat().st_size > 1000, r
+
+
 def test_planejador_padroes():
     f = [_faixa("a.mp3"), _faixa("b.mp3", genero="Dubstep", bpm=140, cam="6A")]
     caminhos = {i.origem: i.destino for i in planejador.planejar(f, "A")}

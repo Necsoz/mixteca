@@ -5,6 +5,7 @@ O que faz: corta subgrave inaudível (abaixo de 25 Hz), deixa o volume parecido 
 O que NÃO faz: não recupera o que um MP3 ruim já perdeu e não mexe em distorção ou timbre.
 """
 import json
+import math
 from functools import lru_cache
 from pathlib import Path
 
@@ -42,20 +43,43 @@ def _codec(extensao: str) -> tuple[str, list[str]]:
     return ".flac", ["-c:a", "flac"]
 
 
+# faixas de valores que o filtro loudnorm do FFmpeg aceita na segunda passada
+_LIMITES = {"input_i": (-99, 0), "input_tp": (-99, 99), "input_lra": (0, 99), "input_thresh": (-99, 0), "target_offset": (-99, 99)}
+
+
+def _medidas_validas(m: dict) -> bool:
+    """A medição às vezes devolve "inf"/"-inf" ou valores fora da faixa (música altíssima ou quase muda)."""
+    try:
+        return all(math.isfinite(float(m[k])) and lo <= float(m[k]) <= hi for k, (lo, hi) in _LIMITES.items())
+    except (KeyError, TypeError, ValueError):
+        return False
+
+
+def _numero(m: dict, chave: str, padrao: float) -> float:
+    try:
+        v = float(m.get(chave))
+        return v if math.isfinite(v) else padrao
+    except (TypeError, ValueError):
+        return padrao
+
+
 def melhorar(origem, destino, alvo: float = ALVO_PADRAO) -> dict:
     """Gera uma cópia melhorada em `destino` (a extensão pode mudar). Só processa se for preciso."""
     m = _medir(origem, alvo)
-    entrada, pico = float(m["input_i"]), float(m["input_tp"])
+    entrada, pico = _numero(m, "input_i", -99.0), _numero(m, "input_tp", 0.0)
+    if entrada <= -70:  # arquivo praticamente mudo: não há o que normalizar
+        return {"status": "ja_bom", "entrada_lufs": entrada, "pico_db": pico}
     if abs(entrada - alvo) <= 1.5 and pico <= -0.3:
         return {"status": "ja_bom", "entrada_lufs": entrada, "pico_db": pico}
     ext, codec = _codec(Path(origem).suffix)
     destino = Path(destino).with_suffix(ext)
     destino.parent.mkdir(parents=True, exist_ok=True)
-    cadeia = (
-        f"highpass=f=25,loudnorm=I={alvo}:TP=-1:LRA=11:measured_I={m['input_i']}:measured_TP={m['input_tp']}"
-        f":measured_LRA={m['input_lra']}:measured_thresh={m['input_thresh']}:offset={m['target_offset']}:linear=true,"
-        "alimiter=limit=0.89:level=disabled"
-    )
+    if _medidas_validas(m):
+        norma = (f"loudnorm=I={alvo}:TP=-1:LRA=11:measured_I={m['input_i']}:measured_TP={m['input_tp']}"
+                 f":measured_LRA={m['input_lra']}:measured_thresh={m['input_thresh']}:offset={m['target_offset']}:linear=true")
+    else:  # medição fora da faixa aceita: normaliza em uma passada só (o próprio filtro mede enquanto processa)
+        norma = f"loudnorm=I={alvo}:TP=-1:LRA=11"
+    cadeia = f"highpass=f=25,{norma},alimiter=limit=0.89:level=disabled"
     base = [achar("ffmpeg"), "-y", "-v", "error", "-i", str(origem)]
     saida = ["-af", cadeia, "-ar", "44100", *codec, "-map_metadata", "0", str(destino)]
     r = executar(base + ["-map", "0:a:0", "-map", "0:v:0?", "-c:v", "copy"] + saida)  # com a capa

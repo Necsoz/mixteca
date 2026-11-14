@@ -121,6 +121,30 @@ def test_bpm_automatico_junta_vizinhos_com_poucas_musicas():
     assert {i.origem: i.destino for i in planejador.planejar(f, "A")}["/x/a0.mp3"].startswith("Big Room/126 BPM/")
 
 
+def test_reaproveitar_pasta_de_melhoradas_antiga_sem_refazer():
+    tmp = Path(tempfile.mkdtemp())
+    origem, saida = tmp / "o", tmp / "Melhoradas"
+    origem.mkdir()
+    for n in ("a", "b", "c", "nova"):
+        (origem / f"{n}.mp3").write_bytes(n.encode() * 50)
+    # pasta feita por uma versão antiga: BPM exato, sem índice; "c" tinha dado erro e "nova" não existia
+    for rel in ("Big Room/126 BPM/08A/Art - A.mp3", "Big Room/127 BPM/08A/Art - B.mp3"):
+        (saida / rel).parent.mkdir(parents=True, exist_ok=True)
+        (saida / rel).write_bytes(b"melhorada " + rel.encode())
+    pedidos = [(str(origem / "a.mp3"), "Big Room/126-127 BPM/08A/Art - A.mp3"), (str(origem / "b.mp3"), "Big Room/126-127 BPM/08A/Art - B.mp3"),
+               (str(origem / "c.mp3"), "Big Room/126-127 BPM/08A/Art - C.mp3"), (str(origem / "nova.mp3"), "Dubstep/140 BPM/06A/Art - Nova.mp3")]
+    fazer, cont, indice = planejador.reaproveitar(saida, pedidos, -10.0)
+    assert fazer == [2, 3] and cont["movidos"] == 2                      # só as duas que faltam precisam ser processadas
+    assert (saida / "Big Room/126-127 BPM/08A/Art - A.mp3").read_bytes().startswith(b"melhorada")
+    assert not (saida / "Big Room/126 BPM").exists()                     # pasta antiga vazia some
+    planejador.salvar_indice(saida, indice)
+    fazer2, cont2, _ = planejador.reaproveitar(saida, pedidos[:2], -10.0)
+    assert fazer2 == [] and cont2["no_lugar"] == 2                       # rodar de novo: nada a fazer
+    (origem / "a.mp3").write_bytes(b"arquivo baixado de novo, diferente")  # original trocado: essa é refeita
+    assert planejador.reaproveitar(saida, pedidos[:2], -10.0)[0] == [0]
+    assert planejador.reaproveitar(saida, pedidos[:2], -10.0, refazer=True)[0] == [0, 1]
+
+
 def test_planejador_padroes():
     f = [_faixa("a.mp3"), _faixa("b.mp3", genero="Dubstep", bpm=140, cam="6A")]
     caminhos = {i.origem: i.destino for i in planejador.planejar(f, "A")}

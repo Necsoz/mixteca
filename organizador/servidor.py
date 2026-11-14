@@ -254,27 +254,50 @@ def r_melhorar(c):
         raise Erro("Volume alvo fora do intervalo permitido.")
     saida = destino / "Melhoradas"
 
+    refazer = bool(c.get("refazer"))
+
     def trabalho(progresso):
+        from .melhoria import _codec
         cont = {"melhoradas": 0, "ja_bom": 0, "erros": 0, "mensagens": [], "pasta": str(saida)}
-        feitos = 0
+        # o que já foi melhorado antes é aproveitado: fica onde está ou é movido para a pasta nova, sem processar de novo
+        rels = [Path(i.destino).with_suffix(_codec(Path(i.origem).suffix)[0]).as_posix() for i in itens]
+        fazer, aproveitado, indice = planejador.reaproveitar(saida, [(i.origem, r) for i, r in zip(itens, rels)], alvo, refazer)
+        cont.update(reaproveitadas=aproveitado["no_lugar"] + aproveitado["movidos"], movidas=aproveitado["movidos"])
+        cont["ja_bom"] += aproveitado["ja_bom"]
+        feitos = len(itens) - len(fazer)
+        progresso(feitos, len(itens), "")
+
+        def marcar(it, rel=None, ja_bom=False):
+            try:
+                st = os.stat(it.origem)
+                indice[it.origem] = {"tam": st.st_size, "mtime": st.st_mtime_ns, "marca": alvo, **({"ja_bom": True} if ja_bom else {"rel": rel})}
+            except OSError:
+                pass
+
         with ThreadPoolExecutor(max_workers=3) as pool:
             futuros = {}
-            for i in itens:
-                futuros[pool.submit(lambda it=i: None if E.cancelar.is_set() else melhorar(it.origem, saida / it.destino, alvo))] = i
+            for n in fazer:
+                i = itens[n]
+                futuros[pool.submit(lambda it=i: None if E.cancelar.is_set() else melhorar(it.origem, saida / it.destino, alvo))] = n
             for fut in as_completed(futuros):
                 feitos += 1
+                it = itens[futuros[fut]]
                 try:
                     r = fut.result()
                     if r is not None:
                         cont["melhoradas" if r["status"] == "melhorado" else "ja_bom"] += 1
-                        it = futuros[fut]
-                        if r["status"] == "melhorado" and (it.tags or it.capa) and c.get("gravar_tags", True):
-                            gravar_tags_copia(r["destino"], it.tags or {}, it.capa)
+                        if r["status"] == "melhorado":
+                            marcar(it, rels[futuros[fut]])
+                            if (it.tags or it.capa) and c.get("gravar_tags", True):
+                                gravar_tags_copia(r["destino"], it.tags or {}, it.capa)
+                        else:
+                            marcar(it, ja_bom=True)
                 except Exception as e:  # noqa: BLE001
                     cont["erros"] += 1
                     if len(cont["mensagens"]) < 5:
-                        cont["mensagens"].append(f"{Path(futuros[fut].origem).name}: {e}")
-                progresso(feitos, len(itens), Path(futuros[fut].origem).name)
+                        cont["mensagens"].append(f"{Path(it.origem).name}: {e}")
+                progresso(feitos, len(itens), Path(it.origem).name)
+        planejador.salvar_indice(saida, indice)
         return cont
 
     E.iniciar("melhorar", trabalho)

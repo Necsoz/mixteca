@@ -234,6 +234,7 @@ button.ed:hover{border-color:var(--acc);color:var(--txt)}button.ed.u{color:var(-
     <label>Volume alvo:
       <select id="alvo"><option value="-14">Suave (-14 LUFS)</option><option value="-10" selected>Padrão (-10 LUFS)</option><option value="-8">Forte (-8 LUFS)</option></select></label>
   </div>
+  <div class="opts"><label><input type="checkbox" id="refazer"> Refazer também as que já foram melhoradas antes (por padrão elas são aproveitadas: ficam onde estão ou são movidas para a pasta nova)</label></div>
   <button class="go" id="b-melhorar" style="margin-top:8px">Criar cópias melhoradas</button>
   <div class="res" id="res-melhorar"></div>
 </section>
@@ -298,7 +299,7 @@ async function terminou(job){
   if(job.tipo==="identificar") return identificou(r);
   const alvo=job.tipo==="copiar"?"#res-copiar":"#res-melhorar"; const el=$(alvo); el.style.display="block";
   if(job.tipo==="copiar"){ el.innerHTML=`<b class="ok">✔ Pronto.</b> ${r.copiados} copiadas, ${r.movidos||0} movidas de pasta, ${r.ignorados} já estavam no lugar, <span class="${r.erros?"bad":""}">${r.erros} com erro</span>.<br><small>Registro: ${esc(r.log)}</small> <button class="mini" id="b-ver-fim">Ver resumo</button>`; $("#b-ver-fim").onclick=()=>mostrarFim(r); mostrarFim(r); }
-  else el.innerHTML=`<b class="ok">✔ Pronto.</b> ${r.melhoradas} cópias melhoradas, ${r.ja_bom} já estavam boas, <span class="${r.erros?"bad":""}">${r.erros} com erro</span>.<br><small>Pasta: ${esc(r.pasta)}</small>${(r.mensagens||[]).map(m=>`<br><small class="bad">${esc(m)}</small>`).join("")}`;
+  else el.innerHTML=`<b class="ok">✔ Pronto.</b> ${r.melhoradas} cópias melhoradas agora, ${r.reaproveitadas||0} aproveitadas de antes${r.movidas?` (${r.movidas} movidas para a pasta nova)`:""}, ${r.ja_bom} já estavam boas, <span class="${r.erros?"bad":""}">${r.erros} com erro</span>.<br><small>Pasta: ${esc(r.pasta)}</small>${(r.mensagens||[]).map(m=>`<br><small class="bad">${esc(m)}</small>`).join("")}`;
 }
 
 /* ---------- tela final de confirmação da cópia ---------- */
@@ -376,7 +377,7 @@ async function melhorar(){
   erro(""); lembrar(); $("#res-melhorar").style.display="none";
   try{
     if(!confirm("Criar cópias melhoradas na pasta “Melhoradas” do destino?\nAs músicas originais não serão alteradas.")) return;
-    await api("/api/melhorar",{...params(),escopo:$("#escopo").value,alvo_lufs:+$("#alvo").value}); acompanhar();
+    await api("/api/melhorar",{...params(),escopo:$("#escopo").value,alvo_lufs:+$("#alvo").value,refazer:$("#refazer").checked}); acompanhar();
   }catch(e){erro(e.message)}
 }
 

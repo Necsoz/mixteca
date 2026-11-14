@@ -233,6 +233,76 @@ def _apagar_pastas_vazias(destino: Path) -> int:
     return n
 
 
+def reaproveitar(saida, pedidos: list[tuple[str, str]], marca=None, refazer: bool = False) -> tuple[list[int], dict, dict]:
+    """Evita refazer trabalho numa pasta de resultados (ex.: "Melhoradas") quando a organização das pastas muda.
+
+    pedidos: [(caminho do original, lugar novo do resultado, relativo a `saida`)]. Para cada um:
+      - se o resultado já existe no lugar novo, fica;
+      - se existe em outro lugar (pelo índice da pasta ou, em pastas feitas por versões antigas, pelo mesmo nome de
+        arquivo), é MOVIDO para o lugar novo;
+      - senão (música nova, original trocado ou `marca` diferente, ex.: outro volume alvo), precisa ser feito.
+    Devolve (posições dos pedidos que precisam ser feitos, contagens, índice atualizado). Nunca apaga arquivos."""
+    saida = Path(saida)
+    indice = {} if refazer else _carregar_indice(saida)
+    cont = {"no_lugar": 0, "movidos": 0, "ja_bom": 0}
+    por_nome: dict[str, list[Path]] | None = None
+    usados: set[Path] = set()
+    fazer: list[int] = []
+    for n, (origem, rel) in enumerate(pedidos):
+        if refazer:
+            fazer.append(n)
+            continue
+        novo = saida / rel
+        try:
+            sig = _assinatura(Path(origem))
+        except OSError:
+            fazer.append(n)
+            continue
+        ant = indice.get(origem)
+        if ant:
+            mesma = ant.get("tam") in (None, sig[0]) and ant.get("mtime") in (None, sig[1]) and ant.get("marca") in (None, marca)
+            if mesma and ant.get("ja_bom"):
+                cont["ja_bom"] += 1
+                continue
+            velho = saida / ant["rel"] if mesma and ant.get("rel") else None
+        else:
+            if por_nome is None:  # pasta feita por versão antiga, sem índice: procura pelo nome do arquivo
+                por_nome = {}
+                for p in (saida.rglob("*") if saida.is_dir() else []):
+                    if p.is_file() and ".organizador" not in p.parts:
+                        por_nome.setdefault(p.name.casefold(), []).append(p)
+            achados = [p for p in por_nome.get(novo.name.casefold(), []) if p not in usados]
+            if len(achados) > 1:  # mesmo nome em mais de um lugar: só vale o que está no mesmo gênero (1ª pasta)
+                achados = [p for p in achados if p.relative_to(saida).parts[0] == Path(rel).parts[0]]
+            velho = novo if novo.is_file() and novo not in usados else (achados[0] if len(achados) == 1 else None)
+        if velho is None or not velho.is_file():
+            fazer.append(n)
+            continue
+        if velho.resolve() != novo.resolve():
+            if novo.exists():
+                fazer.append(n)
+                continue
+            novo.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(velho), str(novo))
+            cont["movidos"] += 1
+        else:
+            cont["no_lugar"] += 1
+        usados.add(novo)
+        indice[origem] = {"rel": Path(rel).as_posix(), "tam": sig[0], "mtime": sig[1], "marca": (ant or {}).get("marca")}
+    if cont["movidos"]:
+        _apagar_pastas_vazias(saida)
+    return fazer, cont, indice
+
+
+def salvar_indice(saida, indice: dict) -> None:
+    pasta = Path(saida) / ".organizador"
+    try:
+        pasta.mkdir(parents=True, exist_ok=True)
+        (pasta / "indice.json").write_text(json.dumps(indice, ensure_ascii=False), encoding="utf-8")
+    except OSError:
+        pass
+
+
 def executar(plano: list[ItemPlano], destino, ao_progresso=None, cancelar=None, gravar_tags: bool = True) -> dict:
     destino = Path(destino)
     copiados = ignorados = erros = gravadas = falhas_tags = capas_trocadas = originais_alterados = movidos = atualizados = 0

@@ -167,6 +167,11 @@ def test_ordem_de_pastas_montada_pelo_usuario():
     assert d(["artista", "ano", "genero"]) == "Kura/2015/Big Room/Kura, Outro - T.mp3"
     assert d(["genero", "inventado"]) == d(None) == "Big Room/128 BPM/08A/Kura, Outro - T.mp3"     # ordem inválida: usa o modelo
     assert planejador.validar_ordem(["bpm", "bpm"]) is None and planejador.validar_ordem([]) is None
+    # tom no nome do arquivo em vez de subpasta: ordena em sequência harmônica dentro da pasta
+    assert planejador.planejar([f], "A", ordem=["genero", "bpm"], tom_no_nome=True)[0].destino == "Big Room/128 BPM/08A - Kura, Outro - T.mp3"
+    nomes = sorted(planejador.planejar([Faixa(caminho=f"/x/{c}.mp3", titulo="T", artista=c, genero="G", bpm=128, bpm_conf=9, camelot=c, tom_conf=.1)
+                                        for c in ("10B", "2A", "1B", "1A")], "A", ordem=["genero"], tom_no_nome=True), key=lambda i: i.destino)
+    assert [Path(i.destino).name[:3] for i in nomes] == ["01A", "01B", "02A", "10B"]
     sem = Faixa(caminho="/x/b.mp3", titulo="T2", genero="Big Room", bpm=128, bpm_conf=9, camelot="8A", tom_conf=.1)
     assert planejador.planejar([sem], "A", ordem=["artista", "ano"])[0].destino == "Sem artista/Sem ano/b.mp3"
     # só o que está na ordem pode mandar para a Revisão: sem tom detectado não importa se o tom não é pasta

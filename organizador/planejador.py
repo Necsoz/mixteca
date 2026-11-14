@@ -137,6 +137,7 @@ def planejar(
     agrupar_generos: bool = False,
     grupos_proprios: dict | None = None,
     ordem: list | None = None,
+    tom_no_nome: bool = False,
 ) -> list[ItemPlano]:
     partes = validar_ordem(ordem) or PADROES[padrao][1]  # ordem montada pelo usuário vale mais que o modelo pronto
     usados: set[str] = set()
@@ -183,7 +184,9 @@ def planejar(
             pastas = [bpm if p == "bpm" else valor(f, p) for p in partes]
         ext = Path(f.caminho).suffix.lower()
         base_nome = limpar_nome(nome_de_arquivo(f.titulo, f.artista, Path(f.caminho).stem))
-        nome = base_nome + ext
+        # tom no começo do nome: dentro da pasta os arquivos ficam na ordem da roda harmônica, sem precisar de subpastas
+        prefixo = f"{rotulo_camelot(f.camelot)} - " if tom_no_nome and f.camelot else ""
+        nome = prefixo + base_nome + ext
         destino = "/".join(pastas + [nome])
         base = Path(nome)
         n = 2

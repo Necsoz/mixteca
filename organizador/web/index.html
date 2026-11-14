@@ -213,6 +213,7 @@ button.ed:hover{border-color:var(--acc);color:var(--txt)}button.ed.u{color:var(-
     <label id="l-tam" style="display:none">Tamanho da faixa:
       <select id="bpm_tam"><option>2</option><option>3</option><option selected>5</option><option>10</option></select></label>
     <label title="Ex.: Riddim, Brostep e Melodic Dubstep vão para a pasta Dubstep; Tech House e Deep House para House. A tag da música continua com o gênero exato."><input type="checkbox" id="agrupar"> Juntar gêneros próximos na mesma pasta</label>
+    <label title="Ex.: “08A - Kura - TORA.mp3”. Dentro de cada pasta os arquivos ficam em ordem harmônica (01A, 01B, 02A...), sem criar subpastas de tom. Combine com tirar o bloco Tom da ordem das pastas."><input type="checkbox" id="tom_nome"> Colocar o tom no começo do nome do arquivo</label>
     <label><input type="checkbox" id="incertas"> Colocar também as incertas nas pastas (em vez de “Revisão”)</label>
   </div>
   <div id="grupos-box" style="display:none;margin-top:12px">
@@ -289,7 +290,7 @@ async function escolher(campo,titulo){
     else if(!r.dialogo) alert("Neste computador, cole o caminho da pasta no campo.");
   }catch(e){erro(e.message)}
 }
-const params=()=>({padrao,ordem:niveis,bpm_modo:$("#bpm_modo").value,bpm_tam:+$("#bpm_tam").value,incluir_incertas:$("#incertas").checked,agrupar_generos:$("#agrupar").checked,destino:$("#destino").value,gravar_tags:$("#gravar_tags").checked});
+const params=()=>({padrao,ordem:niveis,tom_no_nome:$("#tom_nome").checked,bpm_modo:$("#bpm_modo").value,bpm_tam:+$("#bpm_tam").value,incluir_incertas:$("#incertas").checked,agrupar_generos:$("#agrupar").checked,destino:$("#destino").value,gravar_tags:$("#gravar_tags").checked});
 
 /* ---------- tarefas em segundo plano ---------- */
 function acompanhar(){clearInterval(timer);timer=setInterval(checar,700);checar()}
@@ -533,7 +534,7 @@ async function carregarGrupos(){
 async function carregarConfig(){
   const c=await api("/api/config");
   $("#c-contato").value=c.contato||""; $("#c-acoustid").value=""; $("#c-lastfm").value=""; $("#c-discogs").value=""; $("#c-capa").checked=c.procurar_capa_melhor!==false;
-  if(!niveisCarregados){niveisCarregados=true;if((c.ordem_pastas||[]).length)niveis=c.ordem_pastas}
+  if(!niveisCarregados){$("#tom_nome").checked=!!c.tom_no_nome;niveisCarregados=true;if((c.ordem_pastas||[]).length)niveis=c.ordem_pastas}
   if(!gruposCarregados){gruposCarregados=true;$("#agrupar").checked=!!c.agrupar_generos;$("#grupos-box").style.display=$("#agrupar").checked?"":"none"}
   $("#c-discogs").placeholder=c.tem_discogs?"(token guardado)":"deixe vazio se não tiver";
   $("#c-acoustid").placeholder=c.tem_acoustid?"(chave guardada)":"deixe vazio se não tiver";
@@ -604,7 +605,7 @@ $("#b-desfazer").onclick=async()=>{const f=faixas[selecionada];if(!f)return;awai
 $("#b-cfg").onclick=salvarConfig; $("#b-identificar").onclick=()=>identificar(true); $("#f-nivel").onchange=desenharPropostas;
 const loteNivel=()=>$("#f-nivel").value?{nivel:$("#f-nivel").value}:{todas:true};
 $("#b-ac-todas").onclick=()=>decidir({acao:"aceitar",...loteNivel()},true); $("#b-rec-todas").onclick=()=>decidir({acao:"recusar",...loteNivel()},true);
-$("#bpm_modo").onchange=mudouOpcao; $("#bpm_tam").onchange=mudouOpcao; $("#incertas").onchange=mudouOpcao; $("#agrupar").onchange=salvarAgrupar;
+$("#bpm_modo").onchange=mudouOpcao; $("#bpm_tam").onchange=mudouOpcao; $("#incertas").onchange=mudouOpcao; $("#agrupar").onchange=salvarAgrupar; $("#tom_nome").onchange=async()=>{try{await api("/api/config",{tom_no_nome:$("#tom_nome").checked})}catch(e){} mudouOpcao()};
 $("#busca").oninput=desenharTabela; $("#b-conf-todas").onclick=()=>confirmarGeneros(semGenero.map((g,i)=>g.genero?i:-1).filter(i=>i>=0));
 document.querySelectorAll("#passos button").forEach(b=>b.onclick=()=>irPasso(+b.dataset.p));
 $("#b-voltar").onclick=()=>irPasso(passo-1); $("#b-avancar").onclick=()=>irPasso(passo+1);

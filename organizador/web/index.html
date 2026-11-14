@@ -102,6 +102,15 @@ button.mini{padding:2px 10px;font-size:13px}
 button.ed{padding:0 6px;font-size:13px;border-radius:6px;background:transparent;border-color:transparent;color:var(--mut)}
 button.ed:hover{border-color:var(--acc);color:var(--txt)}button.ed.u{color:var(--warn)}
 .fila{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.l2{font-size:13px;color:var(--mut);margin:12px 0 6px}
+.zona{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-height:48px;padding:8px 10px;border:1px dashed var(--bd);border-radius:12px;background:var(--card2)}
+.zona.sobre{border-color:var(--acc)}
+.zona:empty::before{content:"Solte aqui";color:var(--mut);font-size:13px}
+.nivel{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;cursor:grab;background:var(--card);border:1px solid var(--bd)}
+#niveis-on .nivel{border-color:var(--acc);font-weight:600}
+#niveis-on .nivel:not(:last-child)::after{content:"→";color:var(--mut);margin-left:6px;font-weight:400}
+.nivel .x{color:var(--mut);font-weight:400}
+.nivel.arrastando{opacity:.4}
 .gp{background:var(--card2);border:1px solid var(--bd);border-radius:12px;padding:10px 12px;margin-bottom:8px}
 .gt{font-weight:600;margin-bottom:6px}.gt .q{color:var(--acc);font-size:12px;font-weight:400;margin-left:6px}
 .gc{display:flex;flex-wrap:wrap;gap:8px}
@@ -190,8 +199,14 @@ button.ed:hover{border-color:var(--acc);color:var(--txt)}button.ed.u{color:var(-
 <section id="s2" class="off fora" data-p="3">
   <h2>Como você quer as pastas?</h2>
   <div class="chips" id="chips"></div>
-  <p class="hint">Escolha um padrão. Os exemplos abaixo usam músicas suas.</p>
-  <div class="pads" id="pads"></div>
+  <p class="hint">Monte a ordem das pastas: <b>arraste</b> os blocos (ou clique neles) para colocar, tirar e trocar de lugar. A primeira é a pasta de fora.</p>
+  <div class="l2">Ordem das pastas</div>
+  <div class="zona" id="niveis-on" aria-label="Ordem das pastas escolhida"></div>
+  <div class="l2">Disponíveis</div>
+  <div class="zona vazia" id="niveis-off" aria-label="Níveis disponíveis"></div>
+  <details class="cfg" style="margin-top:12px"><summary>Modelos prontos (com exemplos das suas músicas)</summary>
+    <div class="pads" id="pads" style="margin:8px 0"></div>
+  </details>
   <div class="opts">
     <label>BPM nas pastas:
       <select id="bpm_modo" title="Automático: junta BPMs vizinhos que têm poucas músicas (até 5 BPM de diferença), dentro de cada gênero"><option value="auto" selected>Automático (junta BPMs vizinhos)</option><option value="exato">Exato (128 BPM)</option><option value="faixas">Em faixas fixas</option></select></label>
@@ -247,6 +262,7 @@ button.ed:hover{border-color:var(--acc);color:var(--txt)}button.ed.u{color:var(-
 <script>
 const TOKEN="__TOKEN__";
 const $=s=>document.querySelector(s);
+let niveis=["genero","bpm","camelot"], nomesNiveis={genero:"Gênero",bpm:"BPM",camelot:"Tom (Camelot)",artista:"Artista",ano:"Ano"}, niveisCarregados=false;
 let padrao="A", faixas=[], ordem={col:"arquivo",asc:true}, selecionada=null, timer=null, ultimoTipo=null;
 
 function esc(t){return String(t??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
@@ -273,7 +289,7 @@ async function escolher(campo,titulo){
     else if(!r.dialogo) alert("Neste computador, cole o caminho da pasta no campo.");
   }catch(e){erro(e.message)}
 }
-const params=()=>({padrao,bpm_modo:$("#bpm_modo").value,bpm_tam:+$("#bpm_tam").value,incluir_incertas:$("#incertas").checked,agrupar_generos:$("#agrupar").checked,destino:$("#destino").value,gravar_tags:$("#gravar_tags").checked});
+const params=()=>({padrao,ordem:niveis,bpm_modo:$("#bpm_modo").value,bpm_tam:+$("#bpm_tam").value,incluir_incertas:$("#incertas").checked,agrupar_generos:$("#agrupar").checked,destino:$("#destino").value,gravar_tags:$("#gravar_tags").checked});
 
 /* ---------- tarefas em segundo plano ---------- */
 function acompanhar(){clearInterval(timer);timer=setInterval(checar,700);checar()}
@@ -344,10 +360,50 @@ async function carregar(rolar=true){
 
 /* ---------- passo 2: padrões e prévia ---------- */
 async function atualizarPadroes(){
-  const {padroes}=await api("/api/padroes",params());
-  $("#pads").innerHTML=padroes.map(p=>`<button class="pad ${p.id===padrao?"sel":""}" data-id="${p.id}"><strong>${esc(p.nome)}</strong>`+
+  const r=await api("/api/padroes",params()); const padroes=r.padroes; nomesNiveis=r.niveis||nomesNiveis;
+  const igual=o=>o.length===niveis.length&&o.every((x,i)=>x===niveis[i]);
+  $("#pads").innerHTML=padroes.map(p=>`<button class="pad ${igual(p.ordem)?"sel":""}" data-o="${p.ordem.join(",")}"><strong>${esc(p.nome)}</strong>`+
     (p.exemplos.length?p.exemplos.map(x=>`<code title="${esc(x)}">${esc(x)}</code>`).join(""):"<small>Sem exemplos ainda</small>")+`<small>${p.pastas} pastas</small></button>`).join("");
-  document.querySelectorAll(".pad").forEach(b=>b.onclick=()=>{padrao=b.dataset.id;atualizarPadroes();atualizarPrevia()});
+  document.querySelectorAll(".pad").forEach(b=>b.onclick=()=>mudarNiveis(b.dataset.o.split(",")));
+  desenharNiveis();
+}
+/* ---------- ordem das pastas: arrastar e soltar (ou clicar) ---------- */
+function desenharNiveis(){
+  const chip=(k,on)=>`<button class="nivel" draggable="true" data-k="${k}" title="${on?"Clique para tirar; arraste para mudar de lugar; setas do teclado também movem":"Clique ou arraste para usar"}">${esc(nomesNiveis[k]||k)}${on?' <span class="x" aria-hidden="true">×</span>':""}</button>`;
+  $("#niveis-on").innerHTML=niveis.map(k=>chip(k,true)).join("");
+  $("#niveis-off").innerHTML=Object.keys(nomesNiveis).filter(k=>!niveis.includes(k)).map(k=>chip(k,false)).join("");
+  document.querySelectorAll(".nivel").forEach(b=>{
+    const k=b.dataset.k, on=niveis.includes(k);
+    b.onclick=()=>mudarNiveis(on?niveis.filter(x=>x!==k):[...niveis,k]);
+    b.ondragstart=ev=>{ev.dataTransfer.setData("text/plain",k);ev.dataTransfer.effectAllowed="move";b.classList.add("arrastando")};
+    b.ondragend=()=>b.classList.remove("arrastando");
+    if(on) b.onkeydown=ev=>{const i=niveis.indexOf(k), j=ev.key==="ArrowLeft"?i-1:ev.key==="ArrowRight"?i+1:-1;
+      if(j<0||j>=niveis.length) return; ev.preventDefault(); const n=[...niveis]; n.splice(i,1); n.splice(j,0,k); mudarNiveis(n,k)};
+  });
+}
+function prepararZonas(){
+  for(const id of ["#niveis-on","#niveis-off"]){
+    const z=$(id);
+    z.ondragover=ev=>{ev.preventDefault();ev.dataTransfer.dropEffect="move";z.classList.add("sobre")};
+    z.ondragleave=()=>z.classList.remove("sobre");
+    z.ondrop=ev=>{
+      ev.preventDefault(); z.classList.remove("sobre");
+      const k=ev.dataTransfer.getData("text/plain"); if(!nomesNiveis[k]) return;
+      const sem=niveis.filter(x=>x!==k);
+      if(id==="#niveis-off") return mudarNiveis(sem);
+      let pos=sem.length;   // solta antes do primeiro bloco cujo meio está à direita do ponteiro
+      [...z.querySelectorAll(".nivel")].filter(c=>c.dataset.k!==k).some((c,i)=>{const r=c.getBoundingClientRect();if(ev.clientX<r.left+r.width/2&&ev.clientY<r.bottom){pos=i;return true}return false});
+      sem.splice(pos,0,k); mudarNiveis(sem);
+    };
+  }
+}
+async function mudarNiveis(nova,foco){
+  erro("");
+  if(!nova.length) return erro("Deixe pelo menos um nível na ordem das pastas.");
+  niveis=nova;
+  try{await api("/api/config",{ordem_pastas:niveis});await atualizarPadroes();await atualizarPrevia();
+    if(foco){const b=document.querySelector(`#niveis-on .nivel[data-k="${foco}"]`);if(b)b.focus()}
+  }catch(e){erro(e.message)}
 }
 function natural(a,b){return a.localeCompare(b,"pt",{numeric:true})}
 async function atualizarPrevia(){
@@ -477,6 +533,7 @@ async function carregarGrupos(){
 async function carregarConfig(){
   const c=await api("/api/config");
   $("#c-contato").value=c.contato||""; $("#c-acoustid").value=""; $("#c-lastfm").value=""; $("#c-discogs").value=""; $("#c-capa").checked=c.procurar_capa_melhor!==false;
+  if(!niveisCarregados){niveisCarregados=true;if((c.ordem_pastas||[]).length)niveis=c.ordem_pastas}
   if(!gruposCarregados){gruposCarregados=true;$("#agrupar").checked=!!c.agrupar_generos;$("#grupos-box").style.display=$("#agrupar").checked?"":"none"}
   $("#c-discogs").placeholder=c.tem_discogs?"(token guardado)":"deixe vazio se não tiver";
   $("#c-acoustid").placeholder=c.tem_acoustid?"(chave guardada)":"deixe vazio se não tiver";
@@ -546,7 +603,7 @@ $("#bpm_modo").onchange=mudouOpcao; $("#bpm_tam").onchange=mudouOpcao; $("#incer
 $("#busca").oninput=desenharTabela; $("#b-conf-todas").onclick=()=>confirmarGeneros(semGenero.map((g,i)=>g.genero?i:-1).filter(i=>i>=0));
 document.querySelectorAll("#passos button").forEach(b=>b.onclick=()=>irPasso(+b.dataset.p));
 $("#b-voltar").onclick=()=>irPasso(passo-1); $("#b-avancar").onclick=()=>irPasso(passo+1);
-recordar(); carregarConfig().catch(()=>{}); irPasso(1);
+prepararZonas(); recordar(); carregarConfig().catch(()=>{}); irPasso(1);
 setInterval(()=>{api("/api/vivo").catch(()=>{})},20000);
 api("/api/estado").then(e=>{if(e.job.fase==="rodando")acompanhar();else if(e.n_faixas){$("#origem").value=e.origem||$("#origem").value;carregar()}}).catch(()=>{});
 </script>

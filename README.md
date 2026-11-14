@@ -46,7 +46,7 @@ Antes de analisar, você pode abrir **Chaves e opções da busca na internet** p
 - **Gêneros para conferir:** uma linha por música sem gênero confirmado, com a sugestão e de onde ela veio. Confirme uma a uma ou todas de uma vez.
 
 ### 3. Organizar
-- Escolha o **padrão de pastas** (os exemplos usam suas próprias músicas).
+- Monte a **ordem das pastas** arrastando os blocos (ou clicando neles): Gênero, BPM, Tom (Camelot), Artista e Ano, na sequência que quiser. Por exemplo `Gênero → BPM → Tom` ou `Tom → BPM → Gênero`. Há também modelos prontos, com exemplos das suas músicas.
 - **BPM nas pastas:**
   - *Automático:* junta BPMs vizinhos que têm poucas músicas (até 5 BPM de diferença), dentro de cada gênero.
   - *Exato:* uma pasta por BPM.

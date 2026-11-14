@@ -12,6 +12,7 @@ from pathlib import Path
 
 from . import escrita
 from .limpeza import nome_de_arquivo
+from .generos import artista_principal
 from .modelos import Faixa
 from .taxonomia import grupo as grupo_genero
 
@@ -21,6 +22,18 @@ PADROES = {
     "C": ("Gênero → Camelot → BPM", ["genero", "camelot", "bpm"]),
     "D": ("Gênero → BPM", ["genero", "bpm"]),
 }
+
+# níveis de pasta que o usuário pode combinar na ordem que quiser
+NIVEIS = {"genero": "Gênero", "bpm": "BPM", "camelot": "Tom (Camelot)", "artista": "Artista", "ano": "Ano"}
+
+
+def validar_ordem(ordem) -> list[str] | None:
+    """Lista de níveis sem repetição e só com nomes conhecidos; None se não servir."""
+    if not isinstance(ordem, (list, tuple)):
+        return None
+    limpa = [str(n) for n in dict.fromkeys(ordem) if str(n) in NIVEIS]
+    return limpa if limpa and len(limpa) == len(list(ordem)) else None
+
 
 _INVALIDOS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 
@@ -123,8 +136,9 @@ def planejar(
     incluir_incertas: bool = False,
     agrupar_generos: bool = False,
     grupos_proprios: dict | None = None,
+    ordem: list | None = None,
 ) -> list[ItemPlano]:
-    _, partes = PADROES[padrao]
+    partes = validar_ordem(ordem) or PADROES[padrao][1]  # ordem montada pelo usuário vale mais que o modelo pronto
     usados: set[str] = set()
     plano: list[ItemPlano] = []
     antes_do_bpm = partes[:partes.index("bpm")] if "bpm" in partes else []
@@ -132,8 +146,19 @@ def planejar(
     def pasta_genero(f):
         return limpar_nome(grupo_genero(f.genero, grupos_proprios) if agrupar_generos else f.genero) if f.genero else ""
 
+    def valor(f, p):  # nome da pasta deste nível para esta música (o BPM é resolvido à parte)
+        if p == "genero":
+            return pasta_genero(f)
+        if p == "camelot":
+            return rotulo_camelot(f.camelot)
+        if p == "artista":
+            return limpar_nome(artista_principal(f.artista)) if f.artista else "Sem artista"
+        if p == "ano":
+            return f.ano[:4] if (f.ano or "")[:4].isdigit() else "Sem ano"
+        return ""
+
     def contexto(f):  # pastas que vêm antes do BPM: os BPMs são juntados dentro de cada uma (ex.: dentro de cada gênero)
-        return tuple(pasta_genero(f) if p == "genero" else rotulo_camelot(f.camelot) for p in antes_do_bpm)
+        return tuple(valor(f, p) for p in antes_do_bpm)
 
     motivos = {f.caminho: _motivo_revisao(f, partes, min_bpm_conf, min_tom_conf, incluir_incertas) for f in faixas}
     rotulos_auto: dict[tuple, dict[int, str]] = {}
@@ -155,8 +180,7 @@ def planejar(
                 bpm = rotulos_auto.get(contexto(f), {}).get(int(round(f.bpm))) or rotulo_bpm(f.bpm)
             else:
                 bpm = rotulo_bpm(f.bpm, bpm_modo, bpm_tam)
-            valores = {"genero": pasta_genero(f), "bpm": bpm, "camelot": rotulo_camelot(f.camelot)}
-            pastas = [valores[p] for p in partes]
+            pastas = [bpm if p == "bpm" else valor(f, p) for p in partes]
         ext = Path(f.caminho).suffix.lower()
         base_nome = limpar_nome(nome_de_arquivo(f.titulo, f.artista, Path(f.caminho).stem))
         nome = base_nome + ext

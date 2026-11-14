@@ -158,6 +158,22 @@ def test_reaproveitar_pasta_de_melhoradas_antiga_sem_refazer():
     assert planejador.reaproveitar(saida, pedidos[:2], -10.0, refazer=True)[0] == [0, 1]
 
 
+def test_ordem_de_pastas_montada_pelo_usuario():
+    f = Faixa(caminho="/x/a.mp3", titulo="T", artista="Kura/Outro", genero="Big Room", ano="2015-03-01", bpm=128, bpm_conf=9, camelot="8A", tom_conf=.1)
+    d = lambda o: planejador.planejar([f], "A", ordem=o)[0].destino  # noqa: E731
+    assert d(["camelot", "bpm", "genero"]) == "08A/128 BPM/Big Room/Kura, Outro - T.mp3"
+    assert d(["bpm", "camelot", "genero"]) == "128 BPM/08A/Big Room/Kura, Outro - T.mp3"
+    assert d(["genero"]) == "Big Room/Kura, Outro - T.mp3"
+    assert d(["artista", "ano", "genero"]) == "Kura/2015/Big Room/Kura, Outro - T.mp3"
+    assert d(["genero", "inventado"]) == d(None) == "Big Room/128 BPM/08A/Kura, Outro - T.mp3"     # ordem inválida: usa o modelo
+    assert planejador.validar_ordem(["bpm", "bpm"]) is None and planejador.validar_ordem([]) is None
+    sem = Faixa(caminho="/x/b.mp3", titulo="T2", genero="Big Room", bpm=128, bpm_conf=9, camelot="8A", tom_conf=.1)
+    assert planejador.planejar([sem], "A", ordem=["artista", "ano"])[0].destino == "Sem artista/Sem ano/b.mp3"
+    # só o que está na ordem pode mandar para a Revisão: sem tom detectado não importa se o tom não é pasta
+    sem.camelot = None
+    assert not planejador.planejar([sem], "A", ordem=["genero", "bpm"])[0].revisao
+
+
 def test_planejador_padroes():
     f = [_faixa("a.mp3"), _faixa("b.mp3", genero="Dubstep", bpm=140, cam="6A")]
     caminhos = {i.origem: i.destino for i in planejador.planejar(f, "A")}

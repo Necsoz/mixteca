@@ -120,6 +120,7 @@ def _parametros_plano(c: dict) -> dict:
         raise Erro("Padrão de pastas inválido.")
     return {
         "padrao": padrao,
+        "ordem": planejador.validar_ordem(c.get("ordem")),
         "bpm_modo": c.get("bpm_modo") if c.get("bpm_modo") in ("faixas", "auto") else "exato",
         "bpm_tam": max(2, min(20, int(c.get("bpm_tam") or 5))),
         "incluir_incertas": bool(c.get("incluir_incertas")),
@@ -180,14 +181,14 @@ def r_padroes(c):
     """Mostra cada padrão aplicado a músicas da própria biblioteca, para o usuário escolher."""
     if not E.faixas:
         raise Erro("Analise uma pasta primeiro.")
-    base = {k: v for k, v in _parametros_plano(c).items() if k != "padrao"}
+    base = {k: v for k, v in _parametros_plano(c).items() if k not in ("padrao", "ordem")}
     saida = []
     for pid, (nome, _) in planejador.PADROES.items():
         plano = planejador.planejar(E.faixas, padrao=pid, **base)
         exemplos = [i.destino for i in plano if not i.revisao][:3]
         pastas = {i.destino.rsplit("/", 1)[0] for i in plano if not i.revisao}
-        saida.append({"id": pid, "nome": nome, "exemplos": exemplos, "pastas": len(pastas)})
-    return {"padroes": saida}
+        saida.append({"id": pid, "nome": nome, "exemplos": exemplos, "pastas": len(pastas), "ordem": planejador.PADROES[pid][1]})
+    return {"padroes": saida, "niveis": planejador.NIVEIS}
 
 
 def r_previa(c):
@@ -469,7 +470,7 @@ def _treinar() -> dict:
 
 def r_config(c):
     cred = config.carregar_credenciais(E.pasta_config)
-    return {"contato": cred["contato"], "tem_acoustid": bool(cred["acoustid"]), "tem_lastfm": bool(cred["lastfm"]), "tem_discogs": bool(cred["discogs"]), "grupos_pastas": cred["grupos_pastas"], "agrupar_generos": cred["agrupar_generos"], "procurar_capa_melhor": cred["procurar_capa_melhor"],
+    return {"contato": cred["contato"], "tem_acoustid": bool(cred["acoustid"]), "tem_lastfm": bool(cred["lastfm"]), "tem_discogs": bool(cred["discogs"]), "ordem_pastas": [n for n in cred["ordem_pastas"].split(",") if n], "grupos_pastas": cred["grupos_pastas"], "agrupar_generos": cred["agrupar_generos"], "procurar_capa_melhor": cred["procurar_capa_melhor"],
             "aplicar_alta_automatico": cred["aplicar_alta_automatico"], "fpcalc": acoustid.disponivel(),
             "pasta_dados": str(E.pasta_config or pasta_dados())}
 
@@ -482,6 +483,8 @@ def r_config_salvar(c):
     for k in ("aplicar_alta_automatico", "procurar_capa_melhor", "agrupar_generos"):
         if k in c:
             novos[k] = bool(c[k])
+    if "ordem_pastas" in c:
+        novos["ordem_pastas"] = ",".join(planejador.validar_ordem(c["ordem_pastas"]) or [])
     if "grupos_pastas" in c:
         novos["grupos_pastas"] = str(c["grupos_pastas"])[:4000]
     config.salvar_credenciais(novos, E.pasta_config)

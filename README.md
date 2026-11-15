@@ -69,7 +69,7 @@ As pastas de tom usam zero à esquerda (`01A`, `01B`, `02A`…), então ficam na
 - **Melhorar o áudio** gera cópias melhoradas na subpasta `Melhoradas` do destino. Dá para escolher só as de qualidade baixa, só as que estouram ou todas.
 
 ### Organizar de novo no mesmo destino
-Se você adicionar músicas ou mudar as opções e organizar outra vez no mesmo destino, o Mixteca não duplica nada: as cópias que mudaram de pasta são **movidas**, as que já estão no lugar são puladas e só as novas são copiadas. O mesmo vale para a pasta `Melhoradas`.
+Se você adicionar músicas ou mudar as opções e organizar outra vez no mesmo destino, o Mixteca não duplica nada: as cópias que mudaram de pasta são **movidas**, as que já estão no lugar são puladas e só as novas são copiadas. O mesmo vale para a pasta `Melhoradas`: tudo o que já foi melhorado antes acompanha a organização nova, mesmo as músicas que ficaram fora da escolha desta vez (por exemplo, "só as de qualidade baixa").
 
 ## Fontes de informação
 

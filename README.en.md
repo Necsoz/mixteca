@@ -69,7 +69,7 @@ Key folders use a leading zero (`01A`, `01B`, `02A`…), so they sort in Camelot
 - **Improve the audio** creates improved copies in the `Improved` subfolder of the destination (`Melhoradas` when the program is in Portuguese). You can choose only low-quality tracks, only tracks that clip, or all of them.
 
 ### Organizing again into the same destination
-If you add music or change the options and organize again into the same destination, Mixteca does not duplicate anything: copies whose folder changed are **moved**, copies already in place are skipped, and only new tracks are copied. The same applies to the `Improved` folder.
+If you add music or change the options and organize again into the same destination, Mixteca does not duplicate anything: copies whose folder changed are **moved**, copies already in place are skipped, and only new tracks are copied. The same applies to the `Improved` folder: everything improved before follows the new organization, even tracks left out of this run's choice (for example, "only low-quality ones").
 
 ## Information sources
 

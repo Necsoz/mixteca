@@ -158,6 +158,10 @@ def test_reaproveitar_pasta_de_melhoradas_antiga_sem_refazer():
     (origem / "a.mp3").write_bytes(b"arquivo baixado de novo, diferente")  # original trocado: essa é refeita
     assert planejador.reaproveitar(saida, pedidos[:2], -10.0)[0] == [0]
     assert planejador.reaproveitar(saida, pedidos[:2], -10.0, refazer=True)[0] == [0, 1]
+    # fora da escolha desta vez (ex.: só as de qualidade baixa): não é refeita, mas o que já existia acompanha a pasta nova
+    fo, co, io = planejador.reaproveitar(saida, [(pedidos[0][0], "Novo/a.mp3"), (pedidos[1][0], "Novo/b.mp3"), (str(origem / "nunca.mp3"), "Novo/n.mp3")], -10.0, so_arrumar={1, 2})
+    assert fo == [0] and co["movidos"] == 1 and (saida / "Novo/b.mp3").is_file() and io[pedidos[1][0]]["rel"] == "Novo/b.mp3"
+    planejador.salvar_indice(saida, io)
     # pasta antiga + opção nova de tom no nome do arquivo: ainda acha pelo nome antigo, move e renomeia
     velha = tmp / "M2"
     (velha / "Rock/100 BPM/01A").mkdir(parents=True)

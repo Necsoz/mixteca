@@ -305,10 +305,14 @@ def r_melhorar(c):
     destino = _destino(c)
     escopo = c.get("escopo")
     por_caminho = {f.caminho: f for f in E.faixas}
-    itens = [i for i in plano if (escopo == "estouram" and (por_caminho[i.origem].pico_db or -99) > 0)
-             or (escopo == "baixa" and por_caminho[i.origem].qualidade_baixa) or escopo not in ("estouram", "baixa")]
-    if not itens:
+    dentro = [(escopo == "estouram" and (por_caminho[i.origem].pico_db or -99) > 0)
+              or (escopo == "baixa" and por_caminho[i.origem].qualidade_baixa) or escopo not in ("estouram", "baixa") for i in plano]
+    if not any(dentro):
         raise Erro("Nenhuma música se encaixa nessa escolha.")
+    # todas as músicas entram no pedido: as de fora da escolha não são melhoradas agora, mas o que já foi melhorado
+    # delas antes acompanha a organização nova (senão ficaria para trás nas pastas antigas)
+    itens = plano
+    fora = {n for n, d in enumerate(dentro) if not d}
     alvo = float(c.get("alvo_lufs") or -10)
     if not -20 <= alvo <= -5:
         raise Erro("Volume alvo fora do intervalo permitido.")
@@ -321,11 +325,12 @@ def r_melhorar(c):
         cont = {"melhoradas": 0, "ja_bom": 0, "erros": 0, "mensagens": [], "pasta": str(saida)}
         # o que já foi melhorado antes é aproveitado: fica onde está ou é movido para a pasta nova, sem processar de novo
         rels = [Path(i.destino).with_suffix(_codec(Path(i.origem).suffix)[0]).as_posix() for i in itens]
-        fazer, aproveitado, indice = planejador.reaproveitar(saida, [(i.origem, r, [Path(n).with_suffix(Path(r).suffix).name for n in i.outros_nomes]) for i, r in zip(itens, rels)], alvo, refazer)
+        fazer, aproveitado, indice = planejador.reaproveitar(saida, [(i.origem, r, [Path(n).with_suffix(Path(r).suffix).name for n in i.outros_nomes]) for i, r in zip(itens, rels)], alvo, refazer, fora)
         cont.update(reaproveitadas=aproveitado["no_lugar"] + aproveitado["movidos"], movidas=aproveitado["movidos"])
         cont["ja_bom"] += aproveitado["ja_bom"]
-        feitos = len(itens) - len(fazer)
-        progresso(feitos, len(itens), "")
+        total = len(itens) - len(fora)
+        feitos = total - len(fazer)
+        progresso(feitos, total, "")
 
         def marcar(it, rel=None, ja_bom=False):
             try:
@@ -356,12 +361,12 @@ def r_melhorar(c):
                     cont["erros"] += 1
                     if len(cont["mensagens"]) < 5:
                         cont["mensagens"].append(f"{Path(it.origem).name}: {e}")
-                progresso(feitos, len(itens), Path(it.origem).name)
+                progresso(feitos, total, Path(it.origem).name)
         planejador.salvar_indice(saida, indice)
         return cont
 
     E.iniciar("melhorar", trabalho)
-    return {"ok": True, "total": len(itens)}
+    return {"ok": True, "total": sum(dentro)}
 
 
 GENEROS_COMUNS = ["Big Room", "Electro House", "Progressive House", "Future House", "Bass House", "House", "Dubstep",

@@ -287,7 +287,7 @@ def _apagar_pastas_vazias(destino: Path) -> int:
     return n
 
 
-def reaproveitar(saida, pedidos: list[tuple[str, str]], marca=None, refazer: bool = False) -> tuple[list[int], dict, dict]:
+def reaproveitar(saida, pedidos: list[tuple[str, str]], marca=None, refazer: bool = False, so_arrumar=()) -> tuple[list[int], dict, dict]:
     """Evita refazer trabalho numa pasta de resultados (ex.: "Melhoradas") quando a organização das pastas muda.
 
     pedidos: [(caminho do original, lugar novo do resultado, relativo a `saida`)]. Para cada um:
@@ -295,9 +295,14 @@ def reaproveitar(saida, pedidos: list[tuple[str, str]], marca=None, refazer: boo
       - se existe em outro lugar (pelo índice da pasta ou, em pastas feitas por versões antigas, pelo mesmo nome de
         arquivo), é MOVIDO para o lugar novo;
       - senão (música nova, original trocado ou `marca` diferente, ex.: outro volume alvo), precisa ser feito.
+    so_arrumar: posições de pedidos que só devem ser arrumados (movidos se já existirem), nunca feitos: é o que foi
+    melhorado antes e ficou fora da escolha desta vez; sem isso esses arquivos ficariam para trás nas pastas antigas.
     Devolve (posições dos pedidos que precisam ser feitos, contagens, índice atualizado). Nunca apaga arquivos."""
+    so_arrumar = set(so_arrumar)
     saida = Path(saida)
-    indice = {} if refazer else _carregar_indice(saida)
+    antigo = _carregar_indice(saida)
+    # refazer: recomeça o índice, mas guarda o registro do que só vai ser arrumado
+    indice = {p[0]: antigo[p[0]] for n, p in enumerate(pedidos) if n in so_arrumar and p[0] in antigo} if refazer else antigo
     cont = {"no_lugar": 0, "movidos": 0, "ja_bom": 0}
     por_nome: dict[str, list[Path]] | None = None
     usados: set[Path] = set()
@@ -305,7 +310,7 @@ def reaproveitar(saida, pedidos: list[tuple[str, str]], marca=None, refazer: boo
     for n, pedido in enumerate(pedidos):
         origem, rel = pedido[0], pedido[1]
         outros_nomes = list(pedido[2]) if len(pedido) > 2 else []  # nomes que o arquivo pode ter tido antes (ex.: sem o tom na frente)
-        if refazer:
+        if refazer and n not in so_arrumar:
             fazer.append(n)
             continue
         novo = saida / rel
@@ -316,9 +321,9 @@ def reaproveitar(saida, pedidos: list[tuple[str, str]], marca=None, refazer: boo
             continue
         ant = indice.get(origem)
         if ant:
-            mesma = ant.get("tam") in (None, sig[0]) and ant.get("mtime") in (None, sig[1]) and ant.get("marca") in (None, marca)
+            mesma = n in so_arrumar or (ant.get("tam") in (None, sig[0]) and ant.get("mtime") in (None, sig[1]) and ant.get("marca") in (None, marca))
             if mesma and ant.get("ja_bom"):
-                cont["ja_bom"] += 1
+                cont["ja_bom"] += n not in so_arrumar
                 continue
             velho = saida / ant["rel"] if mesma and ant.get("rel") else None
         else:
@@ -337,7 +342,8 @@ def reaproveitar(saida, pedidos: list[tuple[str, str]], marca=None, refazer: boo
             continue
         if velho.resolve() != novo.resolve():
             if novo.exists():
-                fazer.append(n)
+                if n not in so_arrumar:
+                    fazer.append(n)
                 continue
             novo.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(str(velho), str(novo))
@@ -345,10 +351,11 @@ def reaproveitar(saida, pedidos: list[tuple[str, str]], marca=None, refazer: boo
         else:
             cont["no_lugar"] += 1
         usados.add(novo)
-        indice[origem] = {"rel": Path(rel).as_posix(), "tam": sig[0], "mtime": sig[1], "marca": (ant or {}).get("marca")}
+        guarda = ant if ant and n in so_arrumar else {"tam": sig[0], "mtime": sig[1], "marca": (ant or {}).get("marca")}
+        indice[origem] = {**guarda, "rel": Path(rel).as_posix()}
     if cont["movidos"]:
         _apagar_pastas_vazias(saida)
-    return fazer, cont, indice
+    return [n for n in fazer if n not in so_arrumar], cont, indice
 
 
 def salvar_indice(saida, indice: dict) -> None:

@@ -79,6 +79,9 @@ with sync_playwright() as pw:
     pg.wait_for_selector("#fim", state="visible", timeout=10000)
     print("tela final:", pg.inner_text("#fim-card").replace("\n", " | ")[:700])
     pg.locator("#fim-card").screenshot(path=str(prints / "id-3-tela-final.png"))
-    pg.click("#fim-fechar"); pg.screenshot(path=str(prints / "id-2-final.png"), full_page=True); nav.close()
+    pg.click("#fim-fechar"); pg.screenshot(path=str(prints / "id-2-final.png"), full_page=True)
+    pg.click("#b-concluir"); pg.wait_for_timeout(300)   # concluir: volta para a tela inicial, sem fechar o programa
+    assert pg.locator('section[data-p="1"]').is_visible() and not pg.locator("#b-concluir").is_visible()
+    nav.close()
 print("erros de console:", erros or "nenhum")
 srv.shutdown()

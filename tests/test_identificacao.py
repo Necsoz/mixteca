@@ -732,24 +732,6 @@ def test_identificar_nao_pede_email():
     srv.server_close()
 
 
-def test_concluir_e_fechar_so_sem_tarefa_rodando():
-    tmp = _tmp()
-    servidor.criar_servidor(0, tmp / "c.db", tmp)
-    chamadas, original = [], servidor._encerrar
-    servidor._encerrar = lambda: chamadas.append(1)
-    try:
-        servidor.E.job["fase"] = "rodando"
-        try:
-            servidor.r_sair({})
-            raise AssertionError("fechou com tarefa rodando")
-        except servidor.Erro:
-            pass
-        servidor.E.job["fase"] = "parado"
-        assert servidor.r_sair({}) == {"ok": True} and chamadas == [1]
-    finally:
-        servidor._encerrar = original
-
-
 if __name__ == "__main__":
     falhas = 0
     for nome, fn in sorted(globals().items()):

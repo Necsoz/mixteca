@@ -261,7 +261,7 @@ select:disabled{opacity:.45;cursor:not-allowed}
   <button class="go" id="b-melhorar" style="margin-top:8px">Criar cópias melhoradas</button>
   <div class="res" id="res-melhorar"></div>
 </section>
-<div id="nav-passos"><button id="b-voltar">← Voltar</button><button class="go" id="b-avancar">Continuar →</button><button class="go" id="b-concluir" style="display:none" title="Fecha o Mixteca. Suas configurações e a análise ficam guardadas para a próxima vez.">✔ Concluir e fechar</button></div>
+<div id="nav-passos"><button id="b-voltar">← Voltar</button><button class="go" id="b-avancar">Continuar →</button><button class="go" id="b-concluir" style="display:none" title="Volta para a tela inicial. O programa continua aberto e a análise fica guardada.">✔ Concluir</button></div>
 </main>
 
 <div id="fim"><div class="card" id="fim-card"></div></div>
@@ -327,6 +327,8 @@ async function terminou(job){
 }
 
 /* ---------- tela final de confirmação da cópia ---------- */
+/* terminou: fecha o resumo e volta para a tela inicial (o programa continua aberto, com a análise guardada) */
+function concluir(){erro("");$("#fim").style.display="none";irPasso(1)}
 function mostrarFim(r){
   const ok=!r.erros&&!r.ausentes&&!r.originais_alterados&&!r.cancelado;
   const num=(n,t,cl="")=>`<div class="num ${cl}"><b>${n}</b>${t}</div>`;
@@ -343,9 +345,10 @@ function mostrarFim(r){
     lista(`Músicas na Revisão e o motivo${r.revisao_total>rev.length?` (mostrando ${rev.length} de ${r.revisao_total})`:""}:`,rev.slice(0,30).map(x=>`<li>${esc(x.arquivo)} — <b class="warn">${esc(x.motivo)}</b></li>`).concat(rev.length>30?[`<li>… e mais ${rev.length-30}</li>`]:[]))+
     lista("Erros:",(r.erros_detalhe||[]).slice(0,10).map(x=>`<li>${esc(x.arquivo)} — ${esc(x.detalhe)}</li>`))+
     `<p class="hint">Registro do que foi feito (permite restaurar tags): ${esc(r.log)}</p>`+
-    `<div class="acoes"><button class="go" id="fim-abrir">Abrir a pasta</button><button id="fim-fechar">Fechar</button></div>`;
+    `<div class="acoes"><button class="go" id="fim-abrir">Abrir a pasta</button><button id="fim-fechar">Fechar</button><button id="fim-concluir" title="Volta para a tela inicial">✔ Concluir</button></div>`;
   $("#fim").style.display="flex";
   $("#fim-fechar").onclick=()=>{$("#fim").style.display="none"};
+  $("#fim-concluir").onclick=concluir;
   $("#fim-abrir").onclick=async()=>{try{const x=await api("/api/abrir-pasta",{});if(!x.ok)alert("Abra esta pasta no seu computador:\n"+x.caminho)}catch(e){erro(e.message)}};
 }
 
@@ -637,10 +640,7 @@ $("#busca").oninput=desenharTabela; $("#b-conf-todas").onclick=()=>confirmarGene
 $("#idioma").value="__IDIOMA__";
 $("#idioma").onchange=async()=>{try{await api("/api/config",{idioma:$("#idioma").value});location.reload()}catch(e){erro(e.message)}};
 document.querySelectorAll("#passos button").forEach(b=>b.onclick=()=>irPasso(+b.dataset.p));
-$("#b-concluir").onclick=async()=>{erro("");
-  try{await api("/api/sair",{});
-    document.querySelector("main").innerHTML='<div class="card"><h2><span class="ok">✔ Tudo pronto</span></h2><p class="hint">O Mixteca foi encerrado. Se esta janela não fechar sozinha, pode fechá-la.</p></div>';
-  }catch(e){erro(e.message)}};
+$("#b-concluir").onclick=concluir;
 $("#b-voltar").onclick=()=>irPasso(passo-1); $("#b-avancar").onclick=()=>irPasso(passo+1);
 prepararZonas(); recordar(); carregarConfig().catch(()=>{}); irPasso(1);
 setInterval(()=>{api("/api/vivo").catch(()=>{})},20000);

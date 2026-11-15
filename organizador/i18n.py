@@ -167,10 +167,9 @@ TELA_EN: list[tuple[str, str]] = [
     ('>Criar cópias melhoradas</button>', '>Create improved copies</button>'),
     ('← Voltar', '← Back'),
     ('Continuar →', 'Continue →'),
-    ('title="Fecha o Mixteca. Suas configurações e a análise ficam guardadas para a próxima vez."', 'title="Closes Mixteca. Your settings and the analysis are kept for next time."'),
-    ('✔ Concluir e fechar', '✔ Finish and close'),
-    ('✔ Tudo pronto</span>', '✔ All done</span>'),
-    ('O Mixteca foi encerrado. Se esta janela não fechar sozinha, pode fechá-la.', 'Mixteca has been closed. If this window does not close by itself, you can close it.'),
+    ('title="Volta para a tela inicial. O programa continua aberto e a análise fica guardada."', 'title="Goes back to the start screen. The program stays open and the analysis is kept."'),
+    ('title="Volta para a tela inicial"', 'title="Goes back to the start screen"'),
+    ('>✔ Concluir<', '>✔ Finish<'),
     ('<button id="b-pausar">Pausar</button><button id="b-cancelar">Cancelar</button>', '<button id="b-pausar">Pause</button><button id="b-cancelar">Cancel</button>'),
     # ---- textos montados pelo script
     ('nomesNiveis={genero:"Gênero",bpm:"BPM",camelot:"Tom (Camelot)",artista:"Artista",ano:"Ano"}',
@@ -325,7 +324,6 @@ def tela(html: str, idioma: str) -> str:
 
 # ----------------------------------------------------------------------------- mensagens do servidor (pt -> en)
 _EXATO = {
-    "Ainda há uma tarefa em andamento. Espere terminar ou cancele antes de concluir.": "A task is still running. Wait for it to finish or cancel it before finishing.",
     "Já existe uma tarefa em andamento. Espere terminar ou cancele.": "Another task is already running. Wait for it to finish or cancel it.",
     "Informe a pasta das músicas.": "Choose the music folder.",
     "Informe a pasta de destino.": "Choose the destination folder.",

@@ -852,7 +852,7 @@ ROTAS_GET = {"/api/vivo": lambda _: {"ok": True}, "/api/estado": r_estado, "/api
 ROTAS_POST = {
     "/api/pasta": r_pasta, "/api/analisar": r_analisar, "/api/padroes": r_padroes, "/api/previa": r_previa,
     "/api/definir-genero": r_definir_genero, "/api/copiar": r_copiar, "/api/melhorar": r_melhorar, "/api/cancelar": r_cancelar,
-    "/api/config": r_config_salvar, "/api/sair": lambda c: r_sair(c), "/api/identificar": r_identificar, "/api/decidir": r_decidir,
+    "/api/config": r_config_salvar, "/api/identificar": r_identificar, "/api/decidir": r_decidir,
     "/api/desfazer": r_desfazer, "/api/pausar": r_pausar, "/api/abrir-pasta": r_abrir_pasta, "/api/grupos-mover": r_grupos_mover, "/api/grupos-renomear": r_grupos_renomear, "/api/genero-faixa": r_genero_faixa,
 }
 
@@ -976,30 +976,6 @@ def _janela_propria(url: str) -> bool:
     except Exception as e:  # noqa: BLE001
         print(f"Janela própria indisponível ({e}); usando o navegador.")
         return False
-
-
-def _encerrar() -> None:
-    """Fecha o programa um instante depois (dá tempo de a tela receber a resposta)."""
-    def fechar():
-        time.sleep(0.8)
-        try:  # janela própria: fechar a janela encerra o programa normalmente
-            import webview
-            for janela in list(webview.windows):
-                janela.destroy()
-            time.sleep(3)
-        except Exception:  # noqa: BLE001
-            pass
-        os._exit(0)
-    threading.Thread(target=fechar, daemon=True).start()
-
-
-def r_sair(_):
-    """Botão "Concluir e fechar": encerra o programa, desde que nenhuma tarefa esteja rodando."""
-    with E.lock:
-        if E.job["fase"] == "rodando":
-            raise Erro("Ainda há uma tarefa em andamento. Espere terminar ou cancele antes de concluir.")
-    _encerrar()
-    return {"ok": True}
 
 
 def _vigia_do_navegador() -> None:

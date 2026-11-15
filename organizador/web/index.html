@@ -113,6 +113,8 @@ button.ed:hover{border-color:var(--acc);color:var(--txt)}button.ed.u{color:var(-
 #niveis-on .nivel:not(:last-child)::after{content:"→";color:var(--mut);margin-left:6px;font-weight:400}
 .nivel .x{color:var(--mut);font-weight:400}
 .nivel.arrastando{opacity:.4}
+.nivel:disabled,.pad:disabled{opacity:.4;cursor:not-allowed}
+select:disabled{opacity:.45;cursor:not-allowed}
 .gp{background:var(--card2);border:1px solid var(--bd);border-radius:12px;padding:10px 12px;margin-bottom:8px}
 .gt{font-weight:600;margin-bottom:6px}.gt .q{color:var(--acc);font-size:12px;font-weight:400;margin-left:6px}
 .gc{display:flex;flex-wrap:wrap;gap:8px}
@@ -217,8 +219,8 @@ button.ed:hover{border-color:var(--acc);color:var(--txt)}button.ed.u{color:var(-
     <label id="l-tam" style="display:none">Tamanho da faixa:
       <select id="bpm_tam"><option>2</option><option>3</option><option selected>5</option><option>10</option></select></label>
     <label title="Ex.: Riddim, Brostep e Melodic Dubstep vão para a pasta Dubstep; Tech House e Deep House para House. A tag da música continua com o gênero exato."><input type="checkbox" id="agrupar"> Juntar gêneros próximos na mesma pasta</label>
-    <label title="Ex.: “08A - Kura - TORA.mp3”. Dentro de cada pasta os arquivos ficam em ordem harmônica (01A, 01B, 02A...), sem criar subpastas de tom. Combine com tirar o bloco Tom da ordem das pastas."><input type="checkbox" id="tom_nome"> Colocar o tom no começo do nome do arquivo</label>
-    <label title="Ex.: “128 - Kura - TORA.mp3”. Dentro de cada pasta os arquivos ficam do BPM mais baixo ao mais alto, sem criar subpastas de BPM. Junto com o tom no nome vira “128 - 08A - Kura - TORA.mp3”: ordem de BPM e, no mesmo BPM, ordem harmônica. Combine com tirar os blocos BPM e Tom da ordem das pastas."><input type="checkbox" id="bpm_nome"> Colocar o BPM no começo do nome do arquivo</label>
+    <label title="Ex.: “08A - Kura - TORA.mp3”. Dentro de cada pasta os arquivos ficam em ordem harmônica (01A, 01B, 02A...), sem criar subpastas de tom. O bloco Tom sai da ordem das pastas."><input type="checkbox" id="tom_nome"> Colocar o tom no começo do nome do arquivo</label>
+    <label title="Ex.: “128 - Kura - TORA.mp3”. Dentro de cada pasta os arquivos ficam do BPM mais baixo ao mais alto, sem criar subpastas de BPM. Junto com o tom no nome vira “128 - 08A - Kura - TORA.mp3”: ordem de BPM e, no mesmo BPM, ordem harmônica. O bloco BPM sai da ordem das pastas."><input type="checkbox" id="bpm_nome"> Colocar o BPM no começo do nome do arquivo</label>
     <label><input type="checkbox" id="incertas"> Colocar também as incertas nas pastas (em vez de “Revisão”)</label>
   </div>
   <div id="grupos-box" style="display:none;margin-top:12px">
@@ -370,15 +372,30 @@ async function atualizarPadroes(){
   const igual=o=>o.length===niveis.length&&o.every((x,i)=>x===niveis[i]);
   $("#pads").innerHTML=padroes.map(p=>`<button class="pad ${igual(p.ordem)?"sel":""}" data-o="${p.ordem.join(",")}"><strong>${esc(p.nome)}</strong>`+
     (p.exemplos.length?p.exemplos.map(x=>`<code title="${esc(x)}">${esc(x)}</code>`).join(""):"<small>Sem exemplos ainda</small>")+`<small>${p.pastas} pastas</small></button>`).join("");
-  document.querySelectorAll(".pad").forEach(b=>b.onclick=()=>mudarNiveis(b.dataset.o.split(",")));
+  const bl=bloqueados();
+  document.querySelectorAll(".pad").forEach(b=>{const o=b.dataset.o.split(",");
+    if(o.some(k=>bl.includes(k))){b.disabled=true;b.classList.remove("sel");b.title="Este modelo usa como pasta algo que já está no nome do arquivo. Desmarque a opção do nome para usar."}
+    else b.onclick=()=>mudarNiveis(o)});
   desenharNiveis();
+  const semBpm=!niveis.includes("bpm");   /* sem pasta de BPM, não há o que juntar */
+  $("#bpm_modo").disabled=$("#bpm_tam").disabled=semBpm;
+  $("#bpm_modo").title=semBpm?"Só vale quando o BPM é uma das pastas. Coloque o bloco BPM na ordem das pastas para usar.":"Automático: junta BPMs vizinhos que têm poucas músicas (até 5 BPM de diferença), dentro de cada gênero";
 }
 /* ---------- ordem das pastas: arrastar e soltar (ou clicar) ---------- */
+/* o que está no nome do arquivo não pode ser pasta ao mesmo tempo */
+const bloqueados=()=>[...($("#bpm_nome").checked?["bpm"]:[]),...($("#tom_nome").checked?["camelot"]:[])];
+async function mudouNome(chave,id){
+  const bl=bloqueados(), nova=niveis.filter(k=>!bl.includes(k));
+  niveis=nova.length?nova:["genero"];
+  try{await api("/api/config",{[chave]:$(id).checked,ordem_pastas:niveis})}catch(e){}
+  mudouOpcao();
+}
 function desenharNiveis(){
-  const chip=(k,on)=>`<button class="nivel" draggable="true" data-k="${k}" title="${on?"Clique para tirar; arraste para mudar de lugar; setas do teclado também movem":"Clique ou arraste para usar"}">${esc(nomesNiveis[k]||k)}${on?' <span class="x" aria-hidden="true">×</span>':""}</button>`;
+  const bl=bloqueados();
+  const chip=(k,on)=>bl.includes(k)?`<button class="nivel" disabled data-k="${k}" title="Já está no nome do arquivo. Desmarque a opção do nome para usar como pasta.">${esc(nomesNiveis[k]||k)}</button>`:`<button class="nivel" draggable="true" data-k="${k}" title="${on?"Clique para tirar; arraste para mudar de lugar; setas do teclado também movem":"Clique ou arraste para usar"}">${esc(nomesNiveis[k]||k)}${on?' <span class="x" aria-hidden="true">×</span>':""}</button>`;
   $("#niveis-on").innerHTML=niveis.map(k=>chip(k,true)).join("");
   $("#niveis-off").innerHTML=Object.keys(nomesNiveis).filter(k=>!niveis.includes(k)).map(k=>chip(k,false)).join("");
-  document.querySelectorAll(".nivel").forEach(b=>{
+  document.querySelectorAll(".nivel:not(:disabled)").forEach(b=>{
     const k=b.dataset.k, on=niveis.includes(k);
     b.onclick=()=>mudarNiveis(on?niveis.filter(x=>x!==k):[...niveis,k]);
     b.ondragstart=ev=>{ev.dataTransfer.setData("text/plain",k);ev.dataTransfer.effectAllowed="move";b.classList.add("arrastando")};
@@ -394,7 +411,7 @@ function prepararZonas(){
     z.ondragleave=()=>z.classList.remove("sobre");
     z.ondrop=ev=>{
       ev.preventDefault(); z.classList.remove("sobre");
-      const k=ev.dataTransfer.getData("text/plain"); if(!nomesNiveis[k]) return;
+      const k=ev.dataTransfer.getData("text/plain"); if(!nomesNiveis[k]||bloqueados().includes(k)) return;
       const sem=niveis.filter(x=>x!==k);
       if(id==="#niveis-off") return mudarNiveis(sem);
       let pos=sem.length;   /* solta antes do primeiro bloco cujo meio está à direita do ponteiro */
@@ -539,7 +556,7 @@ async function carregarGrupos(){
 async function carregarConfig(){
   const c=await api("/api/config");
   $("#c-contato").value=c.contato||""; $("#c-acoustid").value=""; $("#c-lastfm").value=""; $("#c-discogs").value=""; $("#c-capa").checked=c.procurar_capa_melhor!==false;
-  if(!niveisCarregados){$("#tom_nome").checked=!!c.tom_no_nome;$("#bpm_nome").checked=!!c.bpm_no_nome;niveisCarregados=true;if((c.ordem_pastas||[]).length)niveis=c.ordem_pastas}
+  if(!niveisCarregados){$("#tom_nome").checked=!!c.tom_no_nome;$("#bpm_nome").checked=!!c.bpm_no_nome;niveisCarregados=true;if((c.ordem_pastas||[]).length)niveis=c.ordem_pastas;niveis=niveis.filter(k=>!bloqueados().includes(k));if(!niveis.length)niveis=["genero"]}
   if(!gruposCarregados){gruposCarregados=true;$("#agrupar").checked=!!c.agrupar_generos;$("#grupos-box").style.display=$("#agrupar").checked?"":"none"}
   $("#c-discogs").placeholder=c.tem_discogs?"(token guardado)":"deixe vazio se não tiver";
   $("#c-acoustid").placeholder=c.tem_acoustid?"(chave guardada)":"deixe vazio se não tiver";
@@ -610,7 +627,7 @@ $("#b-desfazer").onclick=async()=>{const f=faixas[selecionada];if(!f)return;awai
 $("#b-cfg").onclick=salvarConfig; $("#b-identificar").onclick=()=>identificar(true); $("#f-nivel").onchange=desenharPropostas;
 const loteNivel=()=>$("#f-nivel").value?{nivel:$("#f-nivel").value}:{todas:true};
 $("#b-ac-todas").onclick=()=>decidir({acao:"aceitar",...loteNivel()},true); $("#b-rec-todas").onclick=()=>decidir({acao:"recusar",...loteNivel()},true);
-$("#bpm_modo").onchange=mudouOpcao; $("#bpm_tam").onchange=mudouOpcao; $("#incertas").onchange=mudouOpcao; $("#agrupar").onchange=salvarAgrupar; $("#tom_nome").onchange=async()=>{try{await api("/api/config",{tom_no_nome:$("#tom_nome").checked})}catch(e){} mudouOpcao()}; $("#bpm_nome").onchange=async()=>{try{await api("/api/config",{bpm_no_nome:$("#bpm_nome").checked})}catch(e){} mudouOpcao()};
+$("#bpm_modo").onchange=mudouOpcao; $("#bpm_tam").onchange=mudouOpcao; $("#incertas").onchange=mudouOpcao; $("#agrupar").onchange=salvarAgrupar; $("#tom_nome").onchange=()=>mudouNome("tom_no_nome","#tom_nome"); $("#bpm_nome").onchange=()=>mudouNome("bpm_no_nome","#bpm_nome");
 $("#busca").oninput=desenharTabela; $("#b-conf-todas").onclick=()=>confirmarGeneros(semGenero.map((g,i)=>g.genero?i:-1).filter(i=>i>=0));
 $("#idioma").value="__IDIOMA__";
 $("#idioma").onchange=async()=>{try{await api("/api/config",{idioma:$("#idioma").value});location.reload()}catch(e){erro(e.message)}};

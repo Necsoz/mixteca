@@ -52,8 +52,9 @@ Antes de analisar, você pode abrir **Chaves e opções da busca na internet** p
 
 ### 3. Organizar
 - Monte a **ordem das pastas** arrastando os blocos (ou clicando neles): Gênero, BPM, Tom (Camelot), Artista e Ano, na sequência que quiser. Por exemplo `Gênero → BPM → Tom` ou `Tom → BPM → Gênero`. Há também modelos prontos, com exemplos das suas músicas.
-- **Colocar o tom no começo do nome do arquivo:** em vez de uma subpasta por tom, cada arquivo vira `08A - Artista - Título`. Tire o bloco Tom da ordem das pastas e, dentro de cada pasta, as músicas ficam em ordem harmônica.
+- **Colocar o tom no começo do nome do arquivo:** em vez de uma subpasta por tom, cada arquivo vira `08A - Artista - Título`. Dentro de cada pasta, as músicas ficam em ordem harmônica.
 - **Colocar o BPM no começo do nome do arquivo:** cada arquivo vira `128 - Artista - Título` (BPM sempre com 3 dígitos, como `090`, para a ordem ficar certa em qualquer aparelho). Com as duas opções ligadas, vira `128 - 08A - Artista - Título`: deixando só o Gênero na ordem das pastas, cada gênero fica numa lista única, do BPM mais baixo ao mais alto e, dentro do mesmo BPM, em ordem harmônica.
+- O que vai no nome do arquivo não vira pasta ao mesmo tempo: ao marcar uma dessas opções, o bloco correspondente (BPM ou Tom) sai da ordem das pastas e fica bloqueado, assim como os modelos prontos que o usam. A opção **BPM nas pastas** só fica ativa quando o BPM é uma das pastas. BPM ou tom incerto no nome também manda a música para a Revisão.
 - **BPM nas pastas:**
   - *Automático:* junta BPMs vizinhos que têm poucas músicas (até 5 BPM de diferença), dentro de cada gênero.
   - *Exato:* uma pasta por BPM.

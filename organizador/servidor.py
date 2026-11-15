@@ -221,6 +221,8 @@ def r_padroes(c):
         exemplos = [i.destino for i in plano if not i.revisao][:3]
         pastas = {i.destino.rsplit("/", 1)[0] for i in plano if not i.revisao}
         ordem = planejador.PADROES[pid][1]
+        if (base["bpm_no_nome"] and "bpm" in ordem) or (base["tom_no_nome"] and "camelot" in ordem):
+            exemplos, pastas = [], set()  # modelo bloqueado na tela: usa como pasta algo que já está no nome do arquivo
         saida.append({"id": pid, "nome": " → ".join(nomes[n] for n in ordem), "exemplos": exemplos, "pastas": len(pastas), "ordem": ordem})
     return {"padroes": saida, "niveis": nomes}
 

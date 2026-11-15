@@ -52,6 +52,16 @@ with sync_playwright() as pw:
     pg.locator('#niveis-on .nivel[data-k="artista"]').click(); pg.wait_for_timeout(800)
     pg.locator('#niveis-on .nivel[data-k="camelot"]').drag_to(pg.locator("#niveis-off")); pg.wait_for_timeout(1000)
     print("depois de tirar artista e tom:", ordem())
+    # BPM no nome do arquivo: o bloco BPM sai da ordem e fica bloqueado, junto com o que depende dele
+    pg.check("#bpm_nome"); pg.wait_for_timeout(1200)
+    travas = lambda: (ordem(), pg.locator('#niveis-off .nivel[data-k="bpm"]').is_disabled(), pg.locator("#bpm_modo").is_disabled(), pg.locator(".pad:disabled").count())  # noqa: E731
+    print("com BPM no nome (ordem, bloco travado, modo travado, modelos travados):", travas(), "|", pg.inner_text("#tree").replace("\n", " | ")[:80])
+    assert travas() == (["genero"], True, True, 4)
+    pg.locator("#s2").screenshot(path=str(prints / "bloqueios.png"))
+    pg.uncheck("#bpm_nome"); pg.wait_for_timeout(1200)
+    assert not pg.locator('#niveis-off .nivel[data-k="bpm"]').is_disabled() and pg.locator("#bpm_modo").is_disabled() and pg.locator(".pad:disabled").count() == 0
+    pg.locator('#niveis-off .nivel[data-k="bpm"]').click(); pg.wait_for_timeout(1000)
+    assert ordem() == ["genero", "bpm"] and not pg.locator("#bpm_modo").is_disabled()
     pg.check("#agrupar"); pg.wait_for_timeout(800)
     print("grupos antes:", pg.inner_text("#grupos-lista").replace("\n", " ")[:160])
     pg.locator("#grupos-lista select").first.select_option(index=1); pg.wait_for_timeout(1500)

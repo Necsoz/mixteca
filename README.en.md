@@ -66,6 +66,7 @@ Key folders use a leading zero (`01A`, `01B`, `02A`…), so they sort in Camelot
 
 ### 4. Copy
 - **Copy music** creates the folders and the copies. A summary at the end confirms what was done.
+- **Finish and close** closes the program when you are done. Settings and the analysis are kept.
 - **Improve the audio** creates improved copies in the `Improved` subfolder of the destination (`Melhoradas` when the program is in Portuguese). You can choose only low-quality tracks, only tracks that clip, or all of them.
 
 ### Organizing again into the same destination

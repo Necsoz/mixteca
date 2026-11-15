@@ -66,6 +66,7 @@ As pastas de tom usam zero à esquerda (`01A`, `01B`, `02A`…), então ficam na
 
 ### 4. Copiar
 - **Copiar músicas** cria as pastas e as cópias. No fim aparece um resumo com a conferência do que foi feito.
+- **Concluir e fechar** encerra o programa quando você terminar. As configurações e a análise ficam guardadas.
 - **Melhorar o áudio** gera cópias melhoradas na subpasta `Melhoradas` do destino. Dá para escolher só as de qualidade baixa, só as que estouram ou todas.
 
 ### Organizar de novo no mesmo destino

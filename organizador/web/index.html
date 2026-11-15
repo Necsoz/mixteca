@@ -261,7 +261,7 @@ select:disabled{opacity:.45;cursor:not-allowed}
   <button class="go" id="b-melhorar" style="margin-top:8px">Criar cópias melhoradas</button>
   <div class="res" id="res-melhorar"></div>
 </section>
-<div id="nav-passos"><button id="b-voltar">← Voltar</button><button class="go" id="b-avancar">Continuar →</button></div>
+<div id="nav-passos"><button id="b-voltar">← Voltar</button><button class="go" id="b-avancar">Continuar →</button><button class="go" id="b-concluir" style="display:none" title="Fecha o Mixteca. Suas configurações e a análise ficam guardadas para a próxima vez.">✔ Concluir e fechar</button></div>
 </main>
 
 <div id="fim"><div class="card" id="fim-card"></div></div>
@@ -284,7 +284,7 @@ function irPasso(n){
   n=Math.max(1,Math.min(4,n)); if(n>1&&!liberado) n=1; const mudou=n!==passo; passo=n;
   document.querySelectorAll("section[data-p]").forEach(s=>s.classList.toggle("fora",+s.dataset.p!==n));
   document.querySelectorAll("#passos button").forEach(b=>{b.classList.toggle("at",+b.dataset.p===n);b.disabled=+b.dataset.p>1&&!liberado;if(+b.dataset.p===n)b.setAttribute("aria-current","step");else b.removeAttribute("aria-current")});
-  $("#nav-passos").style.display=n===1?"none":"flex"; $("#b-avancar").style.display=n===4?"none":"";
+  $("#nav-passos").style.display=n===1?"none":"flex"; $("#b-avancar").style.display=n===4?"none":""; $("#b-concluir").style.display=n===4?"":"none";
   if(mudou) window.scrollTo(0,0);
 }
 function erro(m){const e=$("#erro");e.textContent=m;e.style.display=m?"block":"none";if(m)e.scrollIntoView({behavior:"smooth",block:"center"})}
@@ -637,6 +637,10 @@ $("#busca").oninput=desenharTabela; $("#b-conf-todas").onclick=()=>confirmarGene
 $("#idioma").value="__IDIOMA__";
 $("#idioma").onchange=async()=>{try{await api("/api/config",{idioma:$("#idioma").value});location.reload()}catch(e){erro(e.message)}};
 document.querySelectorAll("#passos button").forEach(b=>b.onclick=()=>irPasso(+b.dataset.p));
+$("#b-concluir").onclick=async()=>{erro("");
+  try{await api("/api/sair",{});
+    document.querySelector("main").innerHTML='<div class="card"><h2><span class="ok">✔ Tudo pronto</span></h2><p class="hint">O Mixteca foi encerrado. Se esta janela não fechar sozinha, pode fechá-la.</p></div>';
+  }catch(e){erro(e.message)}};
 $("#b-voltar").onclick=()=>irPasso(passo-1); $("#b-avancar").onclick=()=>irPasso(passo+1);
 prepararZonas(); recordar(); carregarConfig().catch(()=>{}); irPasso(1);
 setInterval(()=>{api("/api/vivo").catch(()=>{})},20000);

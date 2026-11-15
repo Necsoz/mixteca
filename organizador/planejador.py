@@ -157,9 +157,11 @@ def planejar(
     idioma: str = "pt",
 ) -> list[ItemPlano]:
     partes = validar_ordem(ordem) or PADROES[padrao][1]  # ordem montada pelo usuário vale mais que o modelo pronto
-    # o que já vai no nome do arquivo não vira pasta também (seria a mesma informação duas vezes)
+    # o que já vai no nome do arquivo não vira pasta também (seria a mesma informação duas vezes); a exceção é a
+    # pasta de BPM em faixas ("126-130 BPM") com o BPM exato no nome, que se completam
     no_nome = [p for p, ligado in (("bpm", bpm_no_nome), ("camelot", tom_no_nome)) if ligado]
-    partes = [p for p in partes if p not in no_nome] or ["genero"]
+    repetidas = [p for p in no_nome if p == "camelot" or bpm_modo == "exato"]
+    partes = [p for p in partes if p not in repetidas] or ["genero"]
     usados: set[str] = set()
     plano: list[ItemPlano] = []
     antes_do_bpm = partes[:partes.index("bpm")] if "bpm" in partes else []
@@ -181,7 +183,7 @@ def planejar(
     def contexto(f):  # pastas que vêm antes do BPM: os BPMs são juntados dentro de cada uma (ex.: dentro de cada gênero)
         return tuple(valor(f, p) for p in antes_do_bpm)
 
-    motivos = {f.caminho: nome_pasta(_motivo_revisao(f, partes + no_nome, min_bpm_conf, min_tom_conf, incluir_incertas) or "", idioma) or None for f in faixas}
+    motivos = {f.caminho: nome_pasta(_motivo_revisao(f, partes + [p for p in no_nome if p not in partes], min_bpm_conf, min_tom_conf, incluir_incertas) or "", idioma) or None for f in faixas}
     rotulos_auto: dict[tuple, dict[int, str]] = {}
     if bpm_modo == "auto" and "bpm" in partes:
         contagens: dict[tuple, dict[int, int]] = {}

@@ -52,16 +52,20 @@ with sync_playwright() as pw:
     pg.locator('#niveis-on .nivel[data-k="artista"]').click(); pg.wait_for_timeout(800)
     pg.locator('#niveis-on .nivel[data-k="camelot"]').drag_to(pg.locator("#niveis-off")); pg.wait_for_timeout(1000)
     print("depois de tirar artista e tom:", ordem())
-    # BPM no nome do arquivo: o bloco BPM sai da ordem e fica bloqueado, junto com o que depende dele
+    # BPM no nome: o bloco BPM sai da ordem; de volta, só em faixas (a pasta "Exato" repetiria o nome)
+    pg.select_option("#bpm_modo", "exato"); pg.wait_for_timeout(800)
     pg.check("#bpm_nome"); pg.wait_for_timeout(1200)
-    travas = lambda: (ordem(), pg.locator('#niveis-off .nivel[data-k="bpm"]').is_disabled(), pg.locator("#bpm_modo").is_disabled(), pg.locator(".pad:disabled").count())  # noqa: E731
-    print("com BPM no nome (ordem, bloco travado, modo travado, modelos travados):", travas(), "|", pg.inner_text("#tree").replace("\n", " | ")[:80])
-    assert travas() == (["genero"], True, True, 4)
-    pg.locator("#s2").screenshot(path=str(prints / "bloqueios.png"))
-    pg.uncheck("#bpm_nome"); pg.wait_for_timeout(1200)
-    assert not pg.locator('#niveis-off .nivel[data-k="bpm"]').is_disabled() and pg.locator("#bpm_modo").is_disabled() and pg.locator(".pad:disabled").count() == 0
+    exato_travado = lambda: pg.evaluate("document.querySelector('#bpm_modo option[value=exato]').disabled")  # noqa: E731
+    assert ordem() == ["genero"] and pg.locator("#bpm_modo").is_disabled() and exato_travado() and pg.input_value("#bpm_modo") == "auto"
     pg.locator('#niveis-off .nivel[data-k="bpm"]').click(); pg.wait_for_timeout(1000)
-    assert ordem() == ["genero", "bpm"] and not pg.locator("#bpm_modo").is_disabled()
+    assert ordem() == ["genero", "bpm"] and not pg.locator("#bpm_modo").is_disabled() and exato_travado()
+    print("BPM no nome + pasta de BPM em faixas:", pg.inner_text("#tree").replace("\n", " | ")[:80])
+    # tom no nome: o bloco Tom e os modelos que o usam ficam bloqueados
+    pg.check("#tom_nome"); pg.wait_for_timeout(1200)
+    assert pg.locator('#niveis-off .nivel[data-k="camelot"]').is_disabled() and pg.locator(".pad:disabled").count() == 3
+    pg.locator("#s2").screenshot(path=str(prints / "bloqueios.png"))
+    pg.uncheck("#tom_nome"); pg.uncheck("#bpm_nome"); pg.wait_for_timeout(1200)
+    assert not exato_travado() and pg.locator(".pad:disabled").count() == 0 and ordem() == ["genero", "bpm"]
     pg.check("#agrupar"); pg.wait_for_timeout(800)
     print("grupos antes:", pg.inner_text("#grupos-lista").replace("\n", " ")[:160])
     pg.locator("#grupos-lista select").first.select_option(index=1); pg.wait_for_timeout(1500)

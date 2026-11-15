@@ -193,6 +193,8 @@ def test_ordem_de_pastas_montada_pelo_usuario():
     assert planejador.planejar([f], "A", tom_no_nome=True, bpm_no_nome=True)[0].destino == "Big Room/128 - 08A - Kura, Outro - T.mp3"
     assert planejador.planejar([f], "A", ordem=["bpm", "camelot"], tom_no_nome=True, bpm_no_nome=True)[0].destino == "Big Room/128 - 08A - Kura, Outro - T.mp3"
     assert planejador.planejar([f], "A", ordem=["genero", "bpm"], bpm_no_nome=True)[0].destino == "Big Room/128 - Kura, Outro - T.mp3"
+    # exceção: pasta de BPM em faixas + BPM exato no nome se completam
+    assert planejador.planejar([f], "A", ordem=["genero", "bpm"], bpm_no_nome=True, bpm_modo="faixas", bpm_tam=5)[0].destino == "Big Room/125-129 BPM/128 - Kura, Outro - T.mp3"
     sb = Faixa(caminho="/x/s.mp3", titulo="S", genero="Big Room", camelot="8A", tom_conf=.1)
     assert planejador.planejar([sb], "A", ordem=["genero"], bpm_no_nome=True)[0].destino == "Revisão/BPM não detectado/s.mp3"
     assert planejador.planejar([sb], "A", ordem=["genero"])[0].destino == "Big Room/s.mp3"

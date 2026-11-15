@@ -117,8 +117,8 @@ TELA_EN: list[tuple[str, str]] = [
      'title="E.g. “08A - Artist - Title.mp3”. Inside each folder the files sort in harmonic order (01A, 01B, 02A...), with no key subfolders. '
      'The Key block leaves the folder order."'),
     (' Colocar o tom no começo do nome do arquivo</label>', ' Put the key at the start of the file name</label>'),
-    ('title="Ex.: “128 - Kura - TORA.mp3”. Dentro de cada pasta os arquivos ficam do BPM mais baixo ao mais alto, sem criar subpastas de BPM. Junto com o tom no nome vira “128 - 08A - Kura - TORA.mp3”: ordem de BPM e, no mesmo BPM, ordem harmônica. O bloco BPM sai da ordem das pastas."',
-     'title="E.g. “128 - Artist - Title.mp3”. Inside each folder the files sort from the lowest BPM to the highest, with no BPM subfolders. Together with the key in the name it becomes “128 - 08A - Artist - Title.mp3”: BPM order and, within the same BPM, harmonic order. The BPM block leaves the folder order."'),
+    ('title="Ex.: “128 - Kura - TORA.mp3”. Dentro de cada pasta os arquivos ficam do BPM mais baixo ao mais alto, sem criar subpastas de BPM. Junto com o tom no nome vira “128 - 08A - Kura - TORA.mp3”: ordem de BPM e, no mesmo BPM, ordem harmônica. O bloco BPM sai da ordem das pastas; se quiser, coloque de volta para ter pastas em faixas (“126-130 BPM”) com o BPM exato no nome."',
+     'title="E.g. “128 - Artist - Title.mp3”. Inside each folder the files sort from the lowest BPM to the highest, with no BPM subfolders. Together with the key in the name it becomes “128 - 08A - Artist - Title.mp3”: BPM order and, within the same BPM, harmonic order. The BPM block leaves the folder order; put it back if you want range folders (“126-130 BPM”) with the exact BPM in the name."'),
     (' Colocar o BPM no começo do nome do arquivo</label>', ' Put the BPM at the start of the file name</label>'),
     (' Colocar também as incertas nas pastas (em vez de “Revisão”)</label>', ' Also put the uncertain ones in the folders (instead of “Review”)</label>'),
     ('Como os seus gêneros ficaram agrupados. Para mudar, use a setinha ao lado do gênero: mande para outra pasta ou crie uma <b>nova pasta</b>. '

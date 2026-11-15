@@ -220,7 +220,7 @@ select:disabled{opacity:.45;cursor:not-allowed}
       <select id="bpm_tam"><option>2</option><option>3</option><option selected>5</option><option>10</option></select></label>
     <label title="Ex.: Riddim, Brostep e Melodic Dubstep vão para a pasta Dubstep; Tech House e Deep House para House. A tag da música continua com o gênero exato."><input type="checkbox" id="agrupar"> Juntar gêneros próximos na mesma pasta</label>
     <label title="Ex.: “08A - Kura - TORA.mp3”. Dentro de cada pasta os arquivos ficam em ordem harmônica (01A, 01B, 02A...), sem criar subpastas de tom. O bloco Tom sai da ordem das pastas."><input type="checkbox" id="tom_nome"> Colocar o tom no começo do nome do arquivo</label>
-    <label title="Ex.: “128 - Kura - TORA.mp3”. Dentro de cada pasta os arquivos ficam do BPM mais baixo ao mais alto, sem criar subpastas de BPM. Junto com o tom no nome vira “128 - 08A - Kura - TORA.mp3”: ordem de BPM e, no mesmo BPM, ordem harmônica. O bloco BPM sai da ordem das pastas."><input type="checkbox" id="bpm_nome"> Colocar o BPM no começo do nome do arquivo</label>
+    <label title="Ex.: “128 - Kura - TORA.mp3”. Dentro de cada pasta os arquivos ficam do BPM mais baixo ao mais alto, sem criar subpastas de BPM. Junto com o tom no nome vira “128 - 08A - Kura - TORA.mp3”: ordem de BPM e, no mesmo BPM, ordem harmônica. O bloco BPM sai da ordem das pastas; se quiser, coloque de volta para ter pastas em faixas (“126-130 BPM”) com o BPM exato no nome."><input type="checkbox" id="bpm_nome"> Colocar o BPM no começo do nome do arquivo</label>
     <label><input type="checkbox" id="incertas"> Colocar também as incertas nas pastas (em vez de “Revisão”)</label>
   </div>
   <div id="grupos-box" style="display:none;margin-top:12px">
@@ -383,9 +383,14 @@ async function atualizarPadroes(){
 }
 /* ---------- ordem das pastas: arrastar e soltar (ou clicar) ---------- */
 /* o que está no nome do arquivo não pode ser pasta ao mesmo tempo */
-const bloqueados=()=>[...($("#bpm_nome").checked?["bpm"]:[]),...($("#tom_nome").checked?["camelot"]:[])];
+const bloqueados=()=>$("#tom_nome").checked?["camelot"]:[];
+/* BPM no nome + pasta de BPM só combina em faixas ("126-130 BPM"): a pasta exata repetiria o nome */
+function ajustarModoBpm(){
+  const noNome=$("#bpm_nome").checked, ex=$('#bpm_modo option[value="exato"]');
+  ex.disabled=noNome; if(noNome&&$("#bpm_modo").value==="exato") $("#bpm_modo").value="auto";
+}
 async function mudouNome(chave,id){
-  const bl=bloqueados(), nova=niveis.filter(k=>!bl.includes(k));
+  const bl=[...bloqueados(),...(chave==="bpm_no_nome"&&$(id).checked?["bpm"]:[])], nova=niveis.filter(k=>!bl.includes(k));
   niveis=nova.length?nova:["genero"];
   try{await api("/api/config",{[chave]:$(id).checked,ordem_pastas:niveis})}catch(e){}
   mudouOpcao();
@@ -441,7 +446,7 @@ async function atualizarPrevia(){
     it.slice(0,40).map(x=>`<li>${esc(x.arquivo)} — <b>${esc(x.motivo)}</b></li>`).join("")+(it.length>40?`<li>… e mais ${it.length-40}</li>`:"")+"</ul>":"";
   await carregarGrupos();
 }
-async function mudouOpcao(){$("#l-tam").style.display=$("#bpm_modo").value==="faixas"?"":"none";await atualizarPadroes();await atualizarPrevia()}
+async function mudouOpcao(){ajustarModoBpm();$("#l-tam").style.display=$("#bpm_modo").value==="faixas"?"":"none";await atualizarPadroes();await atualizarPrevia()}
 
 /* ---------- passos 3 e 4 ---------- */
 async function copiar(){
@@ -556,7 +561,7 @@ async function carregarGrupos(){
 async function carregarConfig(){
   const c=await api("/api/config");
   $("#c-contato").value=c.contato||""; $("#c-acoustid").value=""; $("#c-lastfm").value=""; $("#c-discogs").value=""; $("#c-capa").checked=c.procurar_capa_melhor!==false;
-  if(!niveisCarregados){$("#tom_nome").checked=!!c.tom_no_nome;$("#bpm_nome").checked=!!c.bpm_no_nome;niveisCarregados=true;if((c.ordem_pastas||[]).length)niveis=c.ordem_pastas;niveis=niveis.filter(k=>!bloqueados().includes(k));if(!niveis.length)niveis=["genero"]}
+  if(!niveisCarregados){$("#tom_nome").checked=!!c.tom_no_nome;$("#bpm_nome").checked=!!c.bpm_no_nome;niveisCarregados=true;if((c.ordem_pastas||[]).length)niveis=c.ordem_pastas;niveis=niveis.filter(k=>!bloqueados().includes(k));if(!niveis.length)niveis=["genero"];ajustarModoBpm()}
   if(!gruposCarregados){gruposCarregados=true;$("#agrupar").checked=!!c.agrupar_generos;$("#grupos-box").style.display=$("#agrupar").checked?"":"none"}
   $("#c-discogs").placeholder=c.tem_discogs?"(token guardado)":"deixe vazio se não tiver";
   $("#c-acoustid").placeholder=c.tem_acoustid?"(chave guardada)":"deixe vazio se não tiver";

@@ -180,6 +180,15 @@ def test_ordem_de_pastas_montada_pelo_usuario():
     nomes = sorted(planejador.planejar([Faixa(caminho=f"/x/{c}.mp3", titulo="T", artista=c, genero="G", bpm=128, bpm_conf=9, camelot=c, tom_conf=.1)
                                         for c in ("10B", "2A", "1B", "1A")], "A", ordem=["genero"], tom_no_nome=True), key=lambda i: i.destino)
     assert [Path(i.destino).name[:3] for i in nomes] == ["01A", "01B", "02A", "10B"]
+    # BPM (3 dígitos) e tom no nome: uma pasta só por gênero, em ordem de BPM e, no mesmo BPM, harmônica
+    assert planejador.planejar([f], "A", ordem=["genero"], tom_no_nome=True, bpm_no_nome=True)[0].destino == "Big Room/128 - 08A - Kura, Outro - T.mp3"
+    assert planejador.planejar([f], "A", ordem=["genero"], bpm_no_nome=True)[0].destino == "Big Room/128 - Kura, Outro - T.mp3"
+    lista = sorted(Path(i.destino).name[:9] for i in planejador.planejar(
+        [Faixa(caminho=f"/x/{b}{c}.mp3", titulo="T", artista=f"{b}{c}", genero="G", bpm=b, bpm_conf=9, camelot=c, tom_conf=.1)
+         for b, c in ((128, "10B"), (90, "5A"), (128, "2A"), (130.4, "1A"), (128, "1B"))], "A", ordem=["genero"], tom_no_nome=True, bpm_no_nome=True))
+    assert lista == ["090 - 05A", "128 - 01B", "128 - 02A", "128 - 10B", "130 - 01A"]
+    it = planejador.planejar([f], "A", ordem=["genero"], tom_no_nome=True, bpm_no_nome=True)[0]   # nomes de antes, para achar as Melhoradas
+    assert set(it.outros_nomes) == {"Kura, Outro - T.mp3", "08A - Kura, Outro - T.mp3", "128 - Kura, Outro - T.mp3"}
     sem = Faixa(caminho="/x/b.mp3", titulo="T2", genero="Big Room", bpm=128, bpm_conf=9, camelot="8A", tom_conf=.1)
     assert planejador.planejar([sem], "A", ordem=["artista", "ano"])[0].destino == "Sem artista/Sem ano/b.mp3"
     # só o que está na ordem pode mandar para a Revisão: sem tom detectado não importa se o tom não é pasta

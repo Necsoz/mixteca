@@ -136,6 +136,7 @@ def _parametros_plano(c: dict) -> dict:
         "padrao": padrao,
         "ordem": planejador.validar_ordem(c.get("ordem")),
         "tom_no_nome": bool(c.get("tom_no_nome")),
+        "bpm_no_nome": bool(c.get("bpm_no_nome")),
         "idioma": _idioma(),
         "bpm_modo": c.get("bpm_modo") if c.get("bpm_modo") in ("faixas", "auto") else "exato",
         "bpm_tam": max(2, min(20, int(c.get("bpm_tam") or 5))),
@@ -318,7 +319,7 @@ def r_melhorar(c):
         cont = {"melhoradas": 0, "ja_bom": 0, "erros": 0, "mensagens": [], "pasta": str(saida)}
         # o que já foi melhorado antes é aproveitado: fica onde está ou é movido para a pasta nova, sem processar de novo
         rels = [Path(i.destino).with_suffix(_codec(Path(i.origem).suffix)[0]).as_posix() for i in itens]
-        fazer, aproveitado, indice = planejador.reaproveitar(saida, [(i.origem, r, [i.nome + Path(r).suffix]) for i, r in zip(itens, rels)], alvo, refazer)
+        fazer, aproveitado, indice = planejador.reaproveitar(saida, [(i.origem, r, [Path(n).with_suffix(Path(r).suffix).name for n in i.outros_nomes]) for i, r in zip(itens, rels)], alvo, refazer)
         cont.update(reaproveitadas=aproveitado["no_lugar"] + aproveitado["movidos"], movidas=aproveitado["movidos"])
         cont["ja_bom"] += aproveitado["ja_bom"]
         feitos = len(itens) - len(fazer)
@@ -503,7 +504,7 @@ def _treinar() -> dict:
 
 def r_config(c):
     cred = config.carregar_credenciais(E.pasta_config)
-    return {"contato": cred["contato"], "tem_acoustid": bool(cred["acoustid"]), "tem_lastfm": bool(cred["lastfm"]), "tem_discogs": bool(cred["discogs"]), "ordem_pastas": [n for n in cred["ordem_pastas"].split(",") if n], "idioma": i18n.escolher(cred["idioma"]), "tom_no_nome": cred["tom_no_nome"], "grupos_pastas": cred["grupos_pastas"], "agrupar_generos": cred["agrupar_generos"], "procurar_capa_melhor": cred["procurar_capa_melhor"],
+    return {"contato": cred["contato"], "tem_acoustid": bool(cred["acoustid"]), "tem_lastfm": bool(cred["lastfm"]), "tem_discogs": bool(cred["discogs"]), "ordem_pastas": [n for n in cred["ordem_pastas"].split(",") if n], "idioma": i18n.escolher(cred["idioma"]), "tom_no_nome": cred["tom_no_nome"], "bpm_no_nome": cred["bpm_no_nome"], "grupos_pastas": cred["grupos_pastas"], "agrupar_generos": cred["agrupar_generos"], "procurar_capa_melhor": cred["procurar_capa_melhor"],
             "aplicar_alta_automatico": cred["aplicar_alta_automatico"], "fpcalc": acoustid.disponivel(),
             "pasta_dados": str(E.pasta_config or pasta_dados())}
 
@@ -513,7 +514,7 @@ def r_config_salvar(c):
     for k in ("contato", "acoustid", "lastfm", "discogs"):
         if k in c and (k == "contato" or c[k] != "__manter__"):
             novos[k] = c[k]
-    for k in ("aplicar_alta_automatico", "procurar_capa_melhor", "agrupar_generos", "tom_no_nome"):
+    for k in ("aplicar_alta_automatico", "procurar_capa_melhor", "agrupar_generos", "tom_no_nome", "bpm_no_nome"):
         if k in c:
             novos[k] = bool(c[k])
     if c.get("idioma") in i18n.IDIOMAS:

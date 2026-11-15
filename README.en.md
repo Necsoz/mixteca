@@ -53,6 +53,7 @@ Before analyzing, you can open **Keys and internet search options** to enter opt
 ### 3. Organize
 - Build the **folder order** by dragging the blocks (or clicking them): Genre, BPM, Key (Camelot), Artist and Year, in any sequence. For example `Genre → BPM → Key` or `Key → BPM → Genre`. Ready-made templates are also available, with examples from your own music.
 - **Put the key at the start of the file name:** instead of one subfolder per key, each file becomes `08A - Artist - Title`. Remove the Key block from the folder order and the tracks inside each folder sort in harmonic order.
+- **Put the BPM at the start of the file name:** each file becomes `128 - Artist - Title` (BPM always with 3 digits, like `090`, so the order is right on any device). With both options on, it becomes `128 - 08A - Artist - Title`: leave only Genre in the folder order and each genre is a single list, from the lowest BPM to the highest and, within the same BPM, in harmonic order.
 - **BPM in folders:**
   - *Automatic:* merges neighbouring BPMs that have few tracks (up to 5 BPM apart), within each genre.
   - *Exact:* one folder per BPM.

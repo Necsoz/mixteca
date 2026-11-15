@@ -7,7 +7,7 @@ import json
 import re
 import shutil
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import escrita
@@ -82,6 +82,7 @@ class ItemPlano:
     limpar: bool = False       # refaz as tags da cópia só com o que é útil (mp3, flac, m4a)
     ajustou: bool = False      # o usuário/internet mudou algo desta música (grava mesmo em formatos sem limpeza)
     nome: str = ""             # nome de exibição (Artista - Título)
+    outros_nomes: list = field(default_factory=list)  # nomes que a cópia teria com outras opções de BPM/tom no nome
 
 
 def _motivo_revisao(f: Faixa, partes: list[str], min_bpm_conf: float, min_tom_conf: float, incluir_incertas: bool):
@@ -152,6 +153,7 @@ def planejar(
     grupos_proprios: dict | None = None,
     ordem: list | None = None,
     tom_no_nome: bool = False,
+    bpm_no_nome: bool = False,
     idioma: str = "pt",
 ) -> list[ItemPlano]:
     partes = validar_ordem(ordem) or PADROES[padrao][1]  # ordem montada pelo usuário vale mais que o modelo pronto
@@ -199,8 +201,12 @@ def planejar(
             pastas = [bpm if p == "bpm" else valor(f, p) for p in partes]
         ext = Path(f.caminho).suffix.lower()
         base_nome = limpar_nome(nome_de_arquivo(f.titulo, f.artista, Path(f.caminho).stem))
-        # tom no começo do nome: dentro da pasta os arquivos ficam na ordem da roda harmônica, sem precisar de subpastas
-        prefixo = f"{rotulo_camelot(f.camelot)} - " if tom_no_nome and f.camelot else ""
+        # BPM e/ou tom no começo do nome: dentro da pasta os arquivos ficam em ordem de BPM (3 dígitos, para 90 vir antes
+        # de 128 em qualquer aparelho) e, no mesmo BPM, na ordem da roda harmônica, sem precisar de subpastas
+        p_bpm = f"{int(round(f.bpm)):03d} - " if f.bpm is not None else ""
+        p_tom = f"{rotulo_camelot(f.camelot)} - " if f.camelot else ""
+        prefixo = (p_bpm if bpm_no_nome else "") + (p_tom if tom_no_nome else "")
+        outros = [x + base_nome + ext for x in dict.fromkeys(["", p_tom, p_bpm, p_bpm + p_tom]) if x != prefixo]
         nome = prefixo + base_nome + ext
         destino = "/".join(pastas + [nome])
         base = Path(nome)
@@ -217,7 +223,7 @@ def planejar(
             tags["camelot"] = f.camelot
         plano.append(ItemPlano(origem=f.caminho, destino=destino, revisao=motivo,
                                tags={k: v for k, v in tags.items() if v not in ("", None)} or None, capa=aj.get("capa_arquivo"),
-                               limpar=ext in escrita.FORMATOS_LIMPEZA, ajustou=bool(aj), nome=base_nome))
+                               limpar=ext in escrita.FORMATOS_LIMPEZA, ajustou=bool(aj), nome=base_nome, outros_nomes=outros))
     return plano
 
 

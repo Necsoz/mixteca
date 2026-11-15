@@ -117,6 +117,9 @@ TELA_EN: list[tuple[str, str]] = [
      'title="E.g. “08A - Artist - Title.mp3”. Inside each folder the files sort in harmonic order (01A, 01B, 02A...), with no key subfolders. '
      'Combine it with removing the Key block from the folder order."'),
     (' Colocar o tom no começo do nome do arquivo</label>', ' Put the key at the start of the file name</label>'),
+    ('title="Ex.: “128 - Kura - TORA.mp3”. Dentro de cada pasta os arquivos ficam do BPM mais baixo ao mais alto, sem criar subpastas de BPM. Junto com o tom no nome vira “128 - 08A - Kura - TORA.mp3”: ordem de BPM e, no mesmo BPM, ordem harmônica. Combine com tirar os blocos BPM e Tom da ordem das pastas."',
+     'title="E.g. “128 - Artist - Title.mp3”. Inside each folder the files sort from the lowest BPM to the highest, with no BPM subfolders. Together with the key in the name it becomes “128 - 08A - Artist - Title.mp3”: BPM order and, within the same BPM, harmonic order. Combine it with removing the BPM and Key blocks from the folder order."'),
+    (' Colocar o BPM no começo do nome do arquivo</label>', ' Put the BPM at the start of the file name</label>'),
     (' Colocar também as incertas nas pastas (em vez de “Revisão”)</label>', ' Also put the uncertain ones in the folders (instead of “Review”)</label>'),
     ('Como os seus gêneros ficaram agrupados. Para mudar, use a setinha ao lado do gênero: mande para outra pasta ou crie uma <b>nova pasta</b>. '
      'O lápis ao lado do nome <b>renomeia</b> a pasta. A prévia abaixo atualiza na hora.',

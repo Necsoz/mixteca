@@ -732,6 +732,57 @@ def test_identificar_nao_pede_email():
     srv.server_close()
 
 
+def test_repetidas_na_tela_escolha_e_copia():
+    import time as _t
+    from organizador import planejador
+    from organizador.modelos import Faixa
+    tmp = _tmp()
+    servidor.criar_servidor(0, tmp / "c.db", tmp)
+    E = servidor.E
+    velha, nova, dest = tmp / "velha", tmp / "nova", tmp / "dest"
+    for p in (velha, nova):
+        p.mkdir()
+    (velha / "a.mp3").write_bytes(b"a" * 300); (nova / "a2.mp3").write_bytes(b"b" * 300)
+    fa = Faixa(caminho=str(velha / "a.mp3"), titulo="Tora", artista="Kura", genero="Big Room", duracao=200, bitrate_kbps=320, codec="mp3")
+    planejador.executar(planejador.planejar([fa], "A", ordem=["genero"]), dest)
+    fb = Faixa(caminho=str(nova / "a2.mp3"), titulo="Tora", artista="Kura", genero="Big Room", duracao=200, bitrate_kbps=128, codec="mp3")
+    E.faixas, E.origem = [fb], str(nova)
+    servidor.ler_info, original = (lambda c: {"duracao": 200, "bitrate_kbps": 320, "codec": "mp3"}), servidor.ler_info
+    try:
+        c = {"destino": str(dest), "ordem": ["genero"]}
+        r = servidor.r_repetidas(c)["itens"]
+        assert len(r) == 1 and r[0]["sugestao"] == "destino" and r[0]["escolha"] == "destino" and not r[0]["escolhida"]
+        r = servidor.r_repetidas_escolher({"todas": "nova"})["itens"]
+        assert r[0]["escolha"] == "nova" and r[0]["escolhida"]
+        assert servidor.r_repetidas_escolher({"todas": "sugestao"})["itens"][0]["escolha"] == "destino"
+        servidor.r_repetidas_escolher({"itens": [{"caminho": fb.caminho, "escolha": "nova"}]})
+        servidor.r_copiar(c)
+        while E.job["fase"] == "rodando":
+            _t.sleep(0.05)
+        res = E.job["resultado"]
+        assert res["substituidas"] == 1 and res["copiados"] == 1 and (dest / "Substituídas/Big Room/Kura - Tora.mp3").read_bytes() == b"a" * 300
+        assert (dest / "Big Room/Kura - Tora.mp3").read_bytes() == b"b" * 300 and (velha / "a.mp3").is_file()
+        # melhorar: a melhorada antiga também sai do caminho (vai para Melhoradas/Substituídas) e a nova é feita
+        melh = dest / "Melhoradas"; (melh / "Big Room").mkdir(parents=True)
+        (melh / "Big Room/Kura - Tora.mp3").write_bytes(b"melhorada antiga")
+        planejador.salvar_indice(melh, {str(velha / "a.mp3"): {"rel": "Big Room/Kura - Tora.mp3", "tam": 300, "mtime": None, "marca": -10.0}})
+        def falso(origem, destino_arq, alvo):
+            Path(destino_arq).parent.mkdir(parents=True, exist_ok=True); Path(destino_arq).write_bytes(b"melhorada nova")
+            return {"status": "melhorado", "destino": str(destino_arq)}
+        servidor.melhorar, orig_m = falso, servidor.melhorar
+        servidor.E.repetidas_destino = ""       # força recalcular (a cópia acabou de mudar o destino)
+        try:
+            servidor.r_melhorar({**c, "escopo": "todas", "gravar_tags": False})
+            while E.job["fase"] == "rodando":
+                _t.sleep(0.05)
+        finally:
+            servidor.melhorar = orig_m
+        assert (melh / "Substituídas/Big Room/Kura - Tora.mp3").read_bytes() == b"melhorada antiga", E.job
+        assert (melh / "Big Room/Kura - Tora.mp3").read_bytes() == b"melhorada nova"
+    finally:
+        servidor.ler_info = original
+
+
 if __name__ == "__main__":
     falhas = 0
     for nome, fn in sorted(globals().items()):

@@ -358,6 +358,43 @@ def test_genero_escolhido_entra_na_analise_e_bpm_e_inteiro():
 
 
 
+def test_repetidas_de_outra_pasta():
+    from organizador import repetidas
+    tmp = Path(tempfile.mkdtemp())
+    velha, nova, dest = tmp / "velha", tmp / "nova", tmp / "dest"
+    for p in (velha, nova):
+        p.mkdir()
+    def faixa(pasta, nome, titulo, artista, dur, kbps, corte=None):
+        (pasta / nome).write_bytes(nome.encode() * 100)
+        return Faixa(caminho=str(pasta / nome), titulo=titulo, artista=artista, genero="Big Room", bpm=128, bpm_conf=9,
+                     camelot="8A", tom_conf=.1, duracao=dur, bitrate_kbps=kbps, codec="mp3", corte_hz=corte)
+    antigas = [faixa(velha, "a.mp3", "Tora", "Kura", 200, 128), faixa(velha, "b.mp3", "Lose Control", "Maddix", 300, 320),
+               faixa(velha, "c.mp3", "Levels (Radio Edit)", "Avicii", 200, 192), faixa(velha, "d.mp3", "Remix Z (X Remix)", "Art", 250, 320)]
+    planejador.executar(planejador.planejar(antigas, "A", ordem=["genero"]), dest)
+    novas = [faixa(nova, "tora.mp3", "Tora (Original Mix)", "KURA", 201, 320),        # repetida, nova melhor
+             faixa(nova, "lc.mp3", "Lose Control", "Maddix", 300, 128),                # repetida, a do destino é melhor
+             faixa(nova, "lv.mp3", "Levels (Extended Mix)", "Avicii", 380, 320),       # outra versão (duração diferente)
+             faixa(nova, "z.mp3", "Remix Z", "Art", 250, 320),                         # original x remix: músicas diferentes
+             faixa(nova, "nova.mp3", "Inédita", "Alguém", 180, 320)]
+    plano = planejador.planejar(novas, "A", ordem=["genero"])
+    info = {f.caminho: {"duracao": f.duracao, "bitrate_kbps": f.bitrate_kbps, "codec": "mp3"} for f in antigas}
+    ler = lambda c: info.get(c) or {"duracao": next((f.duracao for f in antigas if Path(c).name.endswith(Path(f.caminho).name)), 0)}  # noqa: E731
+    ja = repetidas.existentes(dest, dest / "Melhoradas")
+    achadas = {Path(r["caminho"]).name: r for r in repetidas.detectar(plano, {f.caminho: f for f in novas}, ja, ler)}
+    assert set(achadas) == {"tora.mp3", "lc.mp3"}, achadas.keys()
+    assert achadas["tora.mp3"]["sugestao"] == "nova" and achadas["lc.mp3"]["sugestao"] == "destino"
+    # o mesmo destino organizado de novo com a mesma pasta não tem repetidas
+    assert repetidas.detectar(planejador.planejar(antigas, "A", ordem=["genero"]), {f.caminho: f for f in antigas}, ja, ler) == []
+    mapa = {r["caminho"]: {**r["destino"], "escolha": r["sugestao"]} for r in achadas.values()}
+    res = planejador.executar(plano, dest, repetidas=mapa)
+    assert res["repetidas_mantidas"] == 1 and res["substituidas"] == 1 and res["copiados"] == 4
+    nomes = sorted(p.relative_to(dest).as_posix() for p in dest.rglob("*.mp3"))
+    assert "Substituídas/Big Room/Kura - Tora.mp3" in nomes and "Big Room/KURA - Tora (Original Mix).mp3" in nomes
+    assert "Big Room/Maddix - Lose Control.mp3" in nomes and not any("(2)" in n for n in nomes)
+    assert (velha / "a.mp3").is_file() and (nova / "lc.mp3").is_file()       # originais intactos
+    assert repetidas.existentes(dest, dest / "Melhoradas") and not any("Substitu" in (e["copia"] or "") for e in repetidas.existentes(dest, dest / "Melhoradas"))
+
+
 if __name__ == "__main__":
     falhas = 0
     for nome, fn in sorted(globals().items()):

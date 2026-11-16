@@ -29,7 +29,7 @@ NIVEIS_EN = {"genero": "Genre", "bpm": "BPM", "camelot": "Key (Camelot)", "artis
 # nomes de pastas e motivos que o programa cria, por idioma (a chave é o texto em português)
 PASTAS_EN = {"Revisão": "Review", "Arquivo com erro": "File with error", "Sem gênero": "No genre", "BPM não detectado": "BPM not detected",
              "Tom não detectado": "Key not detected", "BPM incerto": "Uncertain BPM", "Tom incerto": "Uncertain key",
-             "Sem artista": "No artist", "Sem ano": "No year", "Melhoradas": "Improved"}
+             "Sem artista": "No artist", "Sem ano": "No year", "Melhoradas": "Improved", "Substituídas": "Replaced"}
 PASTAS_REVISAO = ("Revisão", "Review")
 
 
@@ -330,7 +330,7 @@ def reaproveitar(saida, pedidos: list[tuple[str, str]], marca=None, refazer: boo
             if por_nome is None:  # pasta feita por versão antiga, sem índice: procura pelo nome do arquivo
                 por_nome = {}
                 for p in (saida.rglob("*") if saida.is_dir() else []):
-                    if p.is_file() and ".organizador" not in p.parts:
+                    if p.is_file() and not {".organizador", "Substituídas", "Replaced"} & set(p.parts):
                         por_nome.setdefault(p.name.casefold(), []).append(p)
             achados = [p for nome in dict.fromkeys([novo.name] + outros_nomes)
                        for p in por_nome.get(nome.casefold(), []) if p not in usados]
@@ -367,9 +367,15 @@ def salvar_indice(saida, indice: dict) -> None:
         pass
 
 
-def executar(plano: list[ItemPlano], destino, ao_progresso=None, cancelar=None, gravar_tags: bool = True) -> dict:
+def executar(plano: list[ItemPlano], destino, ao_progresso=None, cancelar=None, gravar_tags: bool = True,
+             repetidas: dict | None = None, pasta_substituidas: str = "Substituídas") -> dict:
+    """repetidas: {original: {"escolha": "destino"|"nova"|"ambas", "copia": cópia antiga, "origem_antiga"}} para as
+    músicas que já estavam no destino vindas de outra pasta (veja repetidas.py)."""
+    from .repetidas import guardar_substituida
     destino = Path(destino)
+    repetidas = repetidas or {}
     copiados = ignorados = erros = gravadas = falhas_tags = capas_trocadas = originais_alterados = movidos = atualizados = 0
+    mantidas = substituidas = 0
     registro, revisao, detalhes_erro = [], [], []
     indice = _carregar_indice(destino)
 
@@ -391,7 +397,20 @@ def executar(plano: list[ItemPlano], destino, ao_progresso=None, cancelar=None, 
             break
         origem = Path(item.origem)
         alvo = destino / item.destino
+        rep = repetidas.get(item.origem)
         try:
+            if rep and rep.get("escolha") == "destino":   # repetida: fica a que já estava no destino
+                mantidas += 1
+                registro.append({"origem": str(origem), "destino": rep.get("copia") or "", "status": "repetida_mantida"})
+                if ao_progresso:
+                    ao_progresso(i, len(plano))
+                continue
+            if rep and rep.get("escolha") == "nova" and rep.get("copia"):   # trocar: a antiga sai do caminho, sem apagar
+                guardada = guardar_substituida(rep["copia"], destino, pasta_substituidas)
+                indice.pop(rep.get("origem_antiga"), None)
+                if guardada:
+                    substituidas += 1
+                    registro.append({"origem": rep.get("origem_antiga"), "destino": guardada, "status": "substituida", "de": rep["copia"]})
             alvo.parent.mkdir(parents=True, exist_ok=True)
             antes = _assinatura(origem)
             tamanho = antes[0]
@@ -441,7 +460,7 @@ def executar(plano: list[ItemPlano], destino, ao_progresso=None, cancelar=None, 
             registro.append({"origem": str(origem), "destino": str(alvo), "status": "erro", "detalhe": str(e)})
         if ao_progresso:
             ao_progresso(i, len(plano))
-    pastas_vazias = _apagar_pastas_vazias(destino) if movidos else 0
+    pastas_vazias = _apagar_pastas_vazias(destino) if movidos or substituidas else 0
     pasta_log = destino / ".organizador"
     pasta_log.mkdir(parents=True, exist_ok=True)
     arq_log = pasta_log / f"log-{time.strftime('%Y%m%d-%H%M%S')}.json"
@@ -464,4 +483,5 @@ def executar(plano: list[ItemPlano], destino, ao_progresso=None, cancelar=None, 
             "originais_alterados": originais_alterados, "ausentes": ausentes, "pasta_destino": str(destino),
             "revisao": revisao[:300], "revisao_total": len(revisao), "erros_detalhe": detalhes_erro[:50],
             "primeiro_nivel": [{"nome": k, "qtd": v} for k, v in sorted(primeiro.items(), key=lambda kv: (kv[0] in PASTAS_REVISAO, kv[0].casefold()))],
-            "cancelado": bool(cancelar is not None and cancelar.is_set())}
+            "cancelado": bool(cancelar is not None and cancelar.is_set()),
+            "repetidas_mantidas": mantidas, "substituidas": substituidas}

@@ -69,6 +69,11 @@ As pastas de tom usam zero à esquerda (`01A`, `01B`, `02A`…), então ficam na
 - **Concluir** volta para a tela inicial quando você terminar. O programa continua aberto e a análise fica guardada.
 - **Melhorar o áudio** gera cópias melhoradas na subpasta `Melhoradas` do destino. Dá para escolher só as de qualidade baixa, só as que estouram ou todas.
 
+### Músicas repetidas de outra pasta
+Se você escolher **outra pasta de origem** e o mesmo destino, o Mixteca compara as músicas novas com o que já organizou ali antes (inclusive na pasta `Melhoradas`). As que já existem aparecem no passo 2, em **Músicas repetidas**, com a qualidade e a duração das duas versões. Para cada uma o programa sugere ficar com a de **qualidade melhor** (sem perdas, agudos menos cortados ou mais kbps; se forem parecidas, fica a que já está no destino), e você escolhe: **manter a do destino**, **trocar pela nova** ou **manter as duas**. Há botões para aplicar a todas de uma vez.
+
+Duas músicas contam como a mesma quando artista e título batem e a duração é quase igual. Versões diferentes, como Extended e Radio Edit ou original e remix, não são consideradas repetidas. Nada é apagado: quando a nova entra no lugar, a antiga vai para a pasta `Substituídas` dentro do destino. As músicas que não se repetem são organizadas normalmente.
+
 ### Organizar de novo no mesmo destino
 Se você adicionar músicas ou mudar as opções e organizar outra vez no mesmo destino, o Mixteca não duplica nada: as cópias que mudaram de pasta são **movidas**, as que já estão no lugar são puladas e só as novas são copiadas. O mesmo vale para a pasta `Melhoradas`: tudo o que já foi melhorado antes acompanha a organização nova, mesmo as músicas que ficaram fora da escolha desta vez (por exemplo, "só as de qualidade baixa").
 
@@ -89,7 +94,7 @@ As chaves ficam guardadas só no seu computador. Esses serviços têm termos pr�
 ## Segurança dos seus arquivos
 
 - Os originais nunca são alterados. Tags, capas e nomes novos vão apenas para as cópias.
-- Nada é sobrescrito ou apagado no destino. Ao reorganizar, o programa só move cópias que ele mesmo criou e remove pastas que ficaram vazias.
+- Nada é sobrescrito ou apagado no destino. Ao reorganizar, o programa só move cópias que ele mesmo criou e remove pastas que ficaram vazias. Cópias trocadas por versões melhores vão para `Substituídas`.
 - Cada cópia fica registrada em `.organizador` dentro do destino, com as tags anteriores.
 - O programa roda só no seu computador. A internet é usada apenas para consultar as fontes acima, enviando nome, artista e duração da música (e a impressão digital do áudio, se o AcoustID estiver ligado).
 
@@ -127,7 +132,7 @@ python tests/e2e_identificacao_ui.py PASTA_PRINTS   # fluxo na tela (precisa do 
 
 O pacote do Windows é gerado por `.github/workflows/build-windows.yml` (PyInstaller + Inno Setup). As licenças das peças de terceiros estão em `LICENCAS.md`.
 
-Estrutura: `organizador/analise.py` (BPM, tom, qualidade) · `identificacao.py`, `decisao.py`, `casamento.py`, `classificador.py`, `provedores/` (busca e decisão de metadados) · `planejador.py` (pastas e cópia segura) · `escrita.py` (tags nas cópias) · `melhoria.py` (áudio) · `servidor.py` + `web/index.html` (interface).
+Estrutura: `organizador/analise.py` (BPM, tom, qualidade) · `identificacao.py`, `decisao.py`, `casamento.py`, `classificador.py`, `provedores/` (busca e decisão de metadados) · `planejador.py` (pastas e cópia segura) · `repetidas.py` (músicas repetidas entre pastas) · `escrita.py` (tags nas cópias) · `melhoria.py` (áudio) · `servidor.py` + `web/index.html` (interface).
 
 ## Licença
 

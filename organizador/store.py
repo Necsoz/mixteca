@@ -23,6 +23,20 @@ class Cache:
             self._con.execute("CREATE TABLE IF NOT EXISTS online (caminho TEXT PRIMARY KEY, tamanho INTEGER, mtime REAL, versao INTEGER, dados TEXT)")
             self._con.execute("CREATE TABLE IF NOT EXISTS propostas (caminho TEXT PRIMARY KEY, status TEXT, dados TEXT)")
             self._con.execute("CREATE TABLE IF NOT EXISTS sobrescritas (caminho TEXT PRIMARY KEY, dados TEXT)")
+            self._con.execute("CREATE TABLE IF NOT EXISTS repetidas (caminho TEXT PRIMARY KEY, escolha TEXT)")
+            self._con.commit()
+
+    # ---- músicas repetidas: o que o usuário escolheu manter (sem escolha, vale a sugestão do programa)
+    def repetidas_escolhas(self) -> dict:
+        with self._lock:
+            return dict(self._con.execute("SELECT caminho, escolha FROM repetidas").fetchall())
+
+    def repetida_escolher(self, caminho: str, escolha: str | None) -> None:
+        with self._lock:
+            if escolha:
+                self._con.execute("INSERT OR REPLACE INTO repetidas VALUES (?,?)", (caminho, escolha))
+            else:
+                self._con.execute("DELETE FROM repetidas WHERE caminho=?", (caminho,))
             self._con.commit()
 
     # ---- respostas da internet (evita repetir pesquisas)

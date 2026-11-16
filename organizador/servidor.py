@@ -17,7 +17,7 @@ from pathlib import Path
 
 import urllib.parse
 
-from . import ajustes, config, i18n, extras, identificacao, limpeza, planejador
+from . import ajustes, config, i18n, extras, identificacao, limpeza, planejador, repetidas
 from .analise import analisar_arquivo
 from .camelot import nome_tom
 from .classificador import ClassificadorSom
@@ -29,6 +29,7 @@ from .provedores import acoustid, capas
 from .rede import Cliente, ErroRede
 from .escrita import gravar as gravar_tags_copia
 from .store import Cache
+from .tags import ler_info
 from .taxonomia import RENOMEAR, Taxonomia, grupo as grupo_genero, ler_grupos, mover_grupo, renomear_pasta
 
 WEB = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent.parent)) / "organizador" / "web"
@@ -52,6 +53,8 @@ class Estado:
         self.faixas = []
         self.origem = ""
         self.destino_copia = ""
+        self.repetidas: list[dict] = []    # músicas da origem atual que já estão no destino (veja repetidas.py)
+        self.repetidas_destino = ""
         self.ultimo_sinal = 0.0  # último pedido da página (modo navegador)
         self.lados_capa: dict[str, int] = {}
         self.cancelar = threading.Event()
@@ -248,13 +251,65 @@ def _destino(c, origem_ok=True) -> Path:
     return destino
 
 
+def _faixa_antiga(caminho):
+    try:
+        st = os.stat(caminho)
+        return E.cache.obter(caminho, st.st_size, st.st_mtime)
+    except OSError:
+        return None
+
+
+def _calcular_repetidas(c, destino: Path) -> list[dict]:
+    """Compara as músicas da origem atual com o que o programa já colocou neste destino."""
+    plano = _plano(c)
+    ja = repetidas.existentes(destino, destino / planejador.nome_pasta("Melhoradas", _idioma()))
+    por_caminho = {f.caminho: f for f in E.faixas}
+    itens = repetidas.detectar(plano, por_caminho, ja, ler_info, _faixa_antiga)
+    E.repetidas, E.repetidas_destino = itens, str(destino)
+    return itens
+
+
+def _repetidas_com_escolha() -> list[dict]:
+    escolhas = E.cache.repetidas_escolhas()
+    return [{**r, "escolha": escolhas.get(r["caminho"]) or r["sugestao"], "escolhida": r["caminho"] in escolhas} for r in E.repetidas]
+
+
+def _mapa_repetidas(c, destino: Path) -> dict:
+    if str(destino) != E.repetidas_destino:
+        _calcular_repetidas(c, destino)
+    return {r["caminho"]: {**r["destino"], "escolha": r["escolha"]} for r in _repetidas_com_escolha()}
+
+
+def r_repetidas(c):
+    if not E.faixas or not (c.get("destino") or "").strip():
+        return {"itens": []}
+    destino = _destino(c)
+    if not destino.is_dir():
+        return {"itens": []}
+    _calcular_repetidas(c, destino)
+    return {"itens": _repetidas_com_escolha()}
+
+
+def r_repetidas_escolher(c):
+    """Escolha de uma repetida (ou de todas): manter a do destino, trocar pela nova, manter as duas ou seguir a sugestão."""
+    pedidos = [(r["caminho"], c.get("todas")) for r in E.repetidas] if c.get("todas") else \
+              [(x.get("caminho"), x.get("escolha")) for x in c.get("itens") or []]
+    validos = {r["caminho"] for r in E.repetidas}
+    for caminho, escolha in pedidos:
+        if caminho in validos and (escolha in repetidas.ESCOLHAS or escolha == "sugestao"):
+            E.cache.repetida_escolher(caminho, None if escolha == "sugestao" else escolha)
+    return {"itens": _repetidas_com_escolha()}
+
+
 def r_copiar(c):
     plano = _plano(c)
     destino = _destino(c)
 
     def trabalho(progresso):
         E.destino_copia = str(destino)
-        return planejador.executar(plano, destino, lambda i, n: progresso(i, n), E.cancelar, gravar_tags=c.get("gravar_tags", True))
+        mapa = _mapa_repetidas(c, destino) if destino.is_dir() else {}
+        return planejador.executar(plano, destino, lambda i, n: progresso(i, n), E.cancelar, gravar_tags=c.get("gravar_tags", True),
+                                   repetidas=mapa, pasta_substituidas=planejador.nome_pasta("Substituídas", _idioma()))
 
     E.iniciar("copiar", trabalho)
     return {"ok": True, "total": len(plano)}
@@ -322,7 +377,27 @@ def r_melhorar(c):
 
     def trabalho(progresso):
         from .melhoria import _codec
-        cont = {"melhoradas": 0, "ja_bom": 0, "erros": 0, "mensagens": [], "pasta": str(saida)}
+        nonlocal itens, fora
+        cont = {"melhoradas": 0, "ja_bom": 0, "erros": 0, "mensagens": [], "pasta": str(saida), "repetidas_mantidas": 0, "substituidas": 0}
+        # repetidas: a escolhida "manter a do destino" não entra; na "trocar pela nova", a melhorada antiga sai do caminho
+        mapa = _mapa_repetidas(c, destino) if destino.is_dir() else {}
+        if mapa:
+            indice_m = planejador._carregar_indice(saida)
+            novos, novos_fora = [], set()
+            for n, i in enumerate(itens):
+                rep = mapa.get(i.origem)
+                if rep and rep["escolha"] == "destino":
+                    cont["repetidas_mantidas"] += n not in fora
+                    continue
+                if rep and rep["escolha"] == "nova" and n not in fora and rep.get("melhorada"):
+                    if repetidas.guardar_substituida(rep["melhorada"], saida, planejador.nome_pasta("Substituídas", _idioma())):
+                        cont["substituidas"] += 1
+                    indice_m.pop(rep.get("origem_antiga"), None)
+                if n in fora:
+                    novos_fora.add(len(novos))
+                novos.append(i)
+            itens, fora = novos, novos_fora
+            planejador.salvar_indice(saida, indice_m)
         # o que já foi melhorado antes é aproveitado: fica onde está ou é movido para a pasta nova, sem processar de novo
         rels = [Path(i.destino).with_suffix(_codec(Path(i.origem).suffix)[0]).as_posix() for i in itens]
         fazer, aproveitado, indice = planejador.reaproveitar(saida, [(i.origem, r, [Path(n).with_suffix(Path(r).suffix).name for n in i.outros_nomes]) for i, r in zip(itens, rels)], alvo, refazer, fora)
@@ -852,7 +927,7 @@ ROTAS_GET = {"/api/vivo": lambda _: {"ok": True}, "/api/estado": r_estado, "/api
 ROTAS_POST = {
     "/api/pasta": r_pasta, "/api/analisar": r_analisar, "/api/padroes": r_padroes, "/api/previa": r_previa,
     "/api/definir-genero": r_definir_genero, "/api/copiar": r_copiar, "/api/melhorar": r_melhorar, "/api/cancelar": r_cancelar,
-    "/api/config": r_config_salvar, "/api/identificar": r_identificar, "/api/decidir": r_decidir,
+    "/api/config": r_config_salvar, "/api/repetidas": r_repetidas, "/api/repetidas-escolher": r_repetidas_escolher, "/api/identificar": r_identificar, "/api/decidir": r_decidir,
     "/api/desfazer": r_desfazer, "/api/pausar": r_pausar, "/api/abrir-pasta": r_abrir_pasta, "/api/grupos-mover": r_grupos_mover, "/api/grupos-renomear": r_grupos_renomear, "/api/genero-faixa": r_genero_faixa,
 }
 

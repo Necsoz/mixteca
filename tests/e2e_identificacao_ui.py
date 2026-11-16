@@ -82,6 +82,21 @@ with sync_playwright() as pw:
     pg.click("#fim-fechar"); pg.screenshot(path=str(prints / "id-2-final.png"), full_page=True)
     pg.click("#b-concluir"); pg.wait_for_timeout(300)   # concluir: volta para a tela inicial, sem fechar o programa
     assert pg.locator('section[data-p="1"]').is_visible() and not pg.locator("#b-concluir").is_visible()
+    # outra pasta com duas músicas que já estão no destino e uma inédita: aparecem como repetidas
+    import shutil
+    origem2 = tmp / "outra"; origem2.mkdir()
+    shutil.copy2(origem / "a0.mp3", origem2 / "copia de a0.mp3"); shutil.copy2(origem / "b1.mp3", origem2 / "b1 (1).mp3")
+    T._faixa_som(origem2 / "inedita.mp3", "b", 30, {"title": "Inedita", "artist": "Art Nova", "album": "X", "genre": "Sub Z"})
+    pg.fill("#origem", str(origem2)); pg.click("#b-analisar")
+    pg.wait_for_selector("#srep:not(.off)", timeout=180000); pg.wait_for_timeout(800)
+    print("repetidas:", pg.inner_text("#srep").replace("\n", " | ")[:400])
+    assert pg.locator("#rep-corpo tr").count() == 2
+    pg.click("#b-rep-nova"); pg.wait_for_timeout(600)
+    assert pg.locator('#rep-corpo select').first.input_value() == "nova"
+    pg.locator("#srep").screenshot(path=str(prints / "repetidas.png"))
+    pg.click('#passos button[data-p="4"]'); pg.click("#b-copiar"); pg.wait_for_selector("#fim", state="visible", timeout=120000)
+    fim = pg.inner_text("#fim-card"); print("tela final 2:", fim.replace("\n", " | ")[:300])
+    assert "trocadas pelas novas" in fim and len(list((destino / "Substituídas").rglob("*.mp3"))) == 2
     nav.close()
 print("erros de console:", erros or "nenhum")
 srv.shutdown()

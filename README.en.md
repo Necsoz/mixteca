@@ -69,6 +69,11 @@ Key folders use a leading zero (`01A`, `01B`, `02A`…), so they sort in Camelot
 - **Finish** goes back to the start screen when you are done. The program stays open and the analysis is kept.
 - **Improve the audio** creates improved copies in the `Improved` subfolder of the destination (`Melhoradas` when the program is in Portuguese). You can choose only low-quality tracks, only tracks that clip, or all of them.
 
+### Duplicate tracks from another folder
+If you choose **another source folder** with the same destination, Mixteca compares the new tracks with what it already organized there (including the `Improved` folder). The ones that already exist appear in step 2, under **Duplicate tracks**, with the quality and duration of both versions. For each one the program suggests keeping the one with **better quality** (lossless, less cut-off treble or more kbps; if they are similar, the one already in the destination stays), and you choose: **keep the destination one**, **replace with the new one** or **keep both**. There are buttons to apply a choice to all of them at once.
+
+Two tracks count as the same when artist and title match and the duration is almost the same. Different versions, such as Extended and Radio Edit or original and remix, are not treated as duplicates. Nothing is deleted: when the new one takes its place, the old one goes to the `Replaced` folder inside the destination. Tracks that are not duplicates are organized as usual.
+
 ### Organizing again into the same destination
 If you add music or change the options and organize again into the same destination, Mixteca does not duplicate anything: copies whose folder changed are **moved**, copies already in place are skipped, and only new tracks are copied. The same applies to the `Improved` folder: everything improved before follows the new organization, even tracks left out of this run's choice (for example, "only low-quality ones").
 
@@ -89,7 +94,7 @@ Keys are stored only on your computer. These services have their own terms and a
 ## Safety of your files
 
 - Originals are never changed. New tags, covers and names go only to the copies.
-- Nothing is overwritten or deleted in the destination. When reorganizing, the program only moves copies it created itself and removes folders left empty.
+- Nothing is overwritten or deleted in the destination. When reorganizing, the program only moves copies it created itself and removes folders left empty. Copies replaced by better versions go to `Replaced`.
 - Every copy is logged in `.organizador` inside the destination, along with its previous tags.
 - The program runs only on your computer. The internet is used only to query the sources above, sending the track's title, artist and duration (and the audio fingerprint, if AcoustID is enabled).
 
@@ -127,7 +132,7 @@ python tests/e2e_identificacao_ui.py SCREENSHOT_DIR   # on-screen flow (needs Pl
 
 The Windows package is built by `.github/workflows/build-windows.yml` (PyInstaller + Inno Setup). Third-party licenses are listed in `LICENCAS.md`. The code and its comments are written in Portuguese.
 
-Layout: `organizador/analise.py` (BPM, key, quality) · `identificacao.py`, `decisao.py`, `casamento.py`, `classificador.py`, `provedores/` (metadata lookup and decisions) · `planejador.py` (folders and safe copying) · `escrita.py` (tags on copies) · `melhoria.py` (audio) · `servidor.py` + `web/index.html` (interface).
+Layout: `organizador/analise.py` (BPM, key, quality) · `identificacao.py`, `decisao.py`, `casamento.py`, `classificador.py`, `provedores/` (metadata lookup and decisions) · `planejador.py` (folders and safe copying) · `repetidas.py` (duplicate tracks across folders) · `escrita.py` (tags on copies) · `melhoria.py` (audio) · `servidor.py` + `web/index.html` (interface).
 
 ## License
 

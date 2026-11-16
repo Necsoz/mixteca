@@ -8,6 +8,7 @@ recupera o que um MP3 ruim já perdeu e não mexe em distorção ou timbre.
 """
 import json
 import math
+import os
 from functools import lru_cache
 from pathlib import Path
 
@@ -34,6 +35,9 @@ def _medir(origem, alvo: float) -> dict:
     if i < 0 or j < i:
         raise RuntimeError("não consegui medir o volume")
     return json.loads(texto[i:j + 1])
+
+
+_FORMATO = {".mp3": "mp3", ".m4a": "ipod", ".wav": "wav", ".flac": "flac"}   # o temporário não tem a extensão certa
 
 
 def _codec(extensao: str) -> tuple[str, list[str]]:
@@ -88,12 +92,26 @@ def melhorar(origem, destino, alvo: float = ALVO_PADRAO) -> dict:
     ext, codec = _codec(Path(origem).suffix)
     destino = Path(destino).with_suffix(ext)
     destino.parent.mkdir(parents=True, exist_ok=True)
-    cadeia = f"highpass=f=25,volume={g}dB"
     base = [achar("ffmpeg"), "-y", "-v", "error", "-i", str(origem)]
-    saida = ["-af", cadeia, "-ar", "44100", *codec, "-map_metadata", "0", str(destino)]
-    r = executar(base + ["-map", "0:a:0", "-map", "0:v:0?", "-c:v", "copy"] + saida)  # com a capa
-    if r.returncode != 0:
-        r = executar(base + ["-map", "0:a:0"] + saida)  # sem a capa
-    if r.returncode != 0 or not destino.exists():
-        raise RuntimeError(r.stderr.decode(errors="ignore")[-300:] or "falha ao gerar a cópia melhorada")
+    # jeitos de gravar, do melhor para o mais simples: o codificador de MP3 (LAME) da versão do FFmpeg para Windows
+    # falha em algumas músicas no modo VBR ("Cannot allocate memory"); aí vai em taxa fixa (320 kbps), com áudio de 16 bits
+    jeitos = [(f"highpass=f=25,volume={g}dB", codec)]
+    if ext == ".mp3":
+        jeitos.append((f"highpass=f=25,volume={g}dB,aformat=sample_fmts=s16p", ["-c:a", "libmp3lame", "-b:a", "320k", "-id3v2_version", "3"]))
+    # grava num temporário e só no fim troca pelo definitivo: uma falha no meio nunca deixa um arquivo pela metade
+    tmp = destino.with_name(f".tmp-{destino.name}")
+    r = None
+    try:
+        for cadeia, cod in jeitos:
+            saida = ["-af", cadeia, "-ar", "44100", *cod, "-map_metadata", "0", "-f", _FORMATO.get(ext, ext[1:]), str(tmp)]
+            r = executar(base + ["-map", "0:a:0", "-map", "0:v:0?", "-c:v", "copy"] + saida)  # com a capa
+            if r.returncode != 0:
+                r = executar(base + ["-map", "0:a:0"] + saida)  # sem a capa
+            if r.returncode == 0 and tmp.exists() and tmp.stat().st_size > 0:
+                break
+        if r.returncode != 0 or not tmp.exists():
+            raise RuntimeError(r.stderr.decode(errors="ignore")[-300:] or "falha ao gerar a cópia melhorada")
+        os.replace(tmp, destino)
+    finally:
+        tmp.unlink(missing_ok=True)
     return {"status": "melhorado", "entrada_lufs": entrada, "pico_db": pico, "ganho_db": g, "destino": str(destino)}

@@ -449,9 +449,11 @@ def test_refazer_nao_deixa_versao_antiga_para_tras_e_sobras_saem():
     ind[str(o / "a.mp3")]["rel"] = "Big Room/Art - A.mp3"   # o que o melhorar grava depois de refazer
     # sobra de uma rodada antiga (nome com BPM e tom) ao lado da versão atual: vai para Substituídas
     (saida / "Big Room/130 - 01A - Art - A.mp3").write_bytes(b"sobra")
-    (saida / "Big Room/Outra Coisa.mp3").write_bytes(b"do usuario")
-    assert planejador.guardar_sobras(saida, ind) == 1
-    assert (saida / "Substituídas/Big Room/130 - 01A - Art - A.mp3").is_file() and (saida / "Big Room/Outra Coisa.mp3").is_file()
+    (saida / "Big Room/Art - A (Original Mix) - Premiere.mp3").write_bytes(b"titulo antigo")   # nome mudou com a busca
+    (saida / "Big Room/leia.txt").write_bytes(b"nao e musica")
+    assert planejador.guardar_sobras(saida, ind) == 2
+    assert (saida / "Substituídas/Big Room/130 - 01A - Art - A.mp3").is_file() and (saida / "Big Room/leia.txt").is_file()
+    assert (saida / "Big Room/Art - A.mp3").is_file()
 
 
 if __name__ == "__main__":

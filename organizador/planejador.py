@@ -363,27 +363,20 @@ def reaproveitar(saida, pedidos: list[tuple[str, str]], marca=None, refazer: boo
     return [n for n in fazer if n not in so_arrumar], cont, indice
 
 
-_PREFIXO_NOME = re.compile(r"^(?:\d{3} - )?(?:\d{2}[AB] - )?")
-
 
 def guardar_sobras(saida, indice: dict, pasta_substituidas: str = "Substituídas") -> int:
-    """Versões antigas esquecidas numa pasta de resultados: arquivo que o índice não conhece, mas que é a mesma música
-    de um arquivo conhecido na mesma pasta de gênero, só com outro nome (ex.: "128 - 08A - Artista - Título" ao lado de
-    "Artista - Título"). Vão para a pasta Substituídas (nada é apagado). Devolve quantas saíram."""
+    """Versões antigas esquecidas numa pasta de resultados (que só o programa preenche, como "Melhoradas"): todo arquivo
+    de áudio que o índice não conhece é sobra de uma rodada antiga (outro nome, outra pasta, outra versão do título).
+    Vai para a pasta Substituídas (nada é apagado). Devolve quantas saíram."""
     saida = Path(saida)
     pular = {".organizador", "Substituídas", "Replaced"}
     conhecidos = {Path(d["rel"]).as_posix().casefold() for d in indice.values() if d.get("rel")}
-    por_nome = {}
-    for rel in conhecidos:
-        r = Path(rel)
-        por_nome[(r.parts[0] if len(r.parts) > 1 else "", _PREFIXO_NOME.sub("", r.stem), r.suffix)] = rel
     n = 0
     for arq in sorted(saida.rglob("*")) if saida.is_dir() else []:
         rel = arq.relative_to(saida)
         if not arq.is_file() or pular & set(rel.parts) or rel.as_posix().casefold() in conhecidos:
             continue
-        chave = (rel.parts[0].casefold() if len(rel.parts) > 1 else "", _PREFIXO_NOME.sub("", arq.stem).casefold(), arq.suffix.casefold())
-        if chave in por_nome:
+        if arq.suffix.casefold() in (".mp3", ".m4a", ".flac", ".wav", ".aac", ".ogg", ".wma") and conhecidos:
             alvo = saida / pasta_substituidas / rel
             alvo.parent.mkdir(parents=True, exist_ok=True)
             if not alvo.exists():

@@ -752,10 +752,41 @@ def _migrar_coletaneas() -> int:
     return n
 
 
+def _migrar_impressao_digital() -> int:
+    """Uma vez só: o que foi preenchido sozinho a partir de uma identificação pelo AcoustID sai (nome, artista, álbum,
+    ano e gênero automáticos daquela música), porque versões anteriores aceitavam a impressão digital mesmo quando ela
+    contradizia o nome do arquivo (ex.: "Ibranovski - Vicious" virou uma música turca). A busca nova decide de novo."""
+    marca = Path(E.pasta_config) / "migracao-acoustid.ok"
+    if marca.exists():
+        return 0
+    sobre, por_caminho, n = E.cache.sobrescritas(), {f.caminho: f for f in E.faixas}, 0
+    for caminho, ov in list(sobre.items()):
+        campos = ov.get("campos") or {}
+        if not any(c.get("fonte") == "AcoustID" for c in campos.values()):
+            continue
+        f = por_caminho.get(caminho)
+        for k in [k for k, c in campos.items() if c.get("fonte") not in ("você", "manual")]:
+            c = campos.pop(k)
+            if f is not None and k != "capa":
+                setattr(f, k, c.get("anterior", ""))
+                if k == "genero":
+                    f.genero_fonte = ""
+        E.cache.sobrescrita_salvar(caminho, ov if campos else None)
+        if f is not None:
+            ajustes.aplicar_em_faixa(f, ov)
+        n += 1
+    try:
+        marca.write_text("ok", encoding="utf-8")
+    except OSError:
+        pass
+    return n
+
+
 def _identificar_tudo(progresso, internet: bool = True, escopo: str = "faltando", rotulo: str = "") -> dict | None:
     """Busca na internet (ou só pela sonoridade) o que falta, aplica o que é seguro e guarda o resto como sugestão."""
     if internet and E.faixas:
         _migrar_coletaneas()
+        _migrar_impressao_digital()
     cred = config.carregar_credenciais(E.pasta_config)
     base, so_capa = _alvos_identificacao(escopo, cred["procurar_capa_melhor"] and internet, progresso)
     alvos = base + so_capa

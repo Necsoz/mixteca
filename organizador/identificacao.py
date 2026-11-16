@@ -6,7 +6,7 @@ from .provedores import acoustid, capas, discogs, lastfm, musicbrainz
 from .rede import ErroRede  # noqa: F401  (reexportado para quem chama)
 from .taxonomia import Taxonomia
 
-VERSAO_ONLINE = 4  # sobe quando a lógica de busca muda: resultados antigos são pesquisados de novo
+VERSAO_ONLINE = 5  # sobe quando a lógica de busca muda: resultados antigos são pesquisados de novo
 CAMPOS_ROTULO = {"titulo": "Nome", "artista": "Artista", "album": "Álbum/Single", "ano": "Ano", "genero": "Gênero", "capa": "Capa"}
 
 
@@ -33,11 +33,16 @@ def pesquisar_online(faixa, cli, cred: dict, pasta_capas, so_capa: bool = False)
             if c:
                 dd = abs(faixa.duracao - c["duracao"]) if faixa.duracao and c["duracao"] else None
                 nota = casamento.pontuar(art, tit, faixa.duracao, c, "tags") if art and tit else {"score": 0, "nivel": "baixa"}
-                if dd is None or dd <= 8:
-                    nota = {**nota, "score": max(nota["score"], round(res[0]["score"] * 0.95, 3)), "nivel": "alta", "fingerprint": res[0]["score"]}
-                c["_nota"] = nota
-                if melhor is None or nota["score"] >= melhor["_nota"]["score"]:
-                    melhor, fontes = c, ["AcoustID", "MusicBrainz"]
+                # a impressão digital também erra (cadastros trocados no AcoustID): se o arquivo diz claramente outro
+                # artista E outro título, a identificação pelo som é descartada (ex.: "Ibranovski - Vicious" não vira
+                # uma música pop turca só porque o AcoustID disse)
+                contradiz = bool(art and tit) and (nota.get("titulo") or 0) < 0.5 and (nota.get("artista") or 0) < 0.5
+                if not contradiz:
+                    if dd is None or dd <= 8:
+                        nota = {**nota, "score": max(nota["score"], round(res[0]["score"] * 0.95, 3)), "nivel": "alta", "fingerprint": res[0]["score"]}
+                    c["_nota"] = nota
+                    if melhor is None or nota["score"] >= melhor["_nota"]["score"]:
+                        melhor, fontes = c, ["AcoustID", "MusicBrainz"]
     generos_extras = {}  # fontes extras locais e opcionais (arquivos na pasta "extras"; ver extras.py)
     if tit and not so_capa:
         for mod in extras.carregar_todos(pasta_capas.parent):

@@ -91,6 +91,8 @@ With no setup, Mixteca uses **MusicBrainz** (track data) and the **Cover Art Arc
 
 Keys are stored only on your computer. These services have their own terms and are free for noncommercial use only.
 
+**Recognition by sound.** AcoustID is sometimes wrong too (mixed-up entries in the service). If what it recognizes clearly contradicts the file name (a different artist **and** a different title), the result is discarded.
+
 **Confidence levels.** What is found with high or medium confidence fills empty fields automatically. Weak guesses become suggestions for you to decide on. Replacing information that already existed always asks for your confirmation.
 
 ## Safety of your files

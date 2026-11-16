@@ -91,6 +91,8 @@ Sem configurar nada, o Mixteca usa o **MusicBrainz** (dados das músicas) e o **
 
 As chaves ficam guardadas só no seu computador. Esses serviços têm termos próprios e são gratuitos apenas para uso não comercial.
 
+**Reconhecimento pelo som.** O AcoustID também erra de vez em quando (cadastros trocados no serviço). Se o que ele reconhece contradiz claramente o nome do arquivo (outro artista **e** outro título), o resultado é descartado.
+
 **Níveis de confiança.** O que é encontrado com confiança alta ou média preenche sozinho os campos vazios. Palpites fracos viram sugestões para você decidir. Trocar uma informação que já existia sempre pede sua confirmação.
 
 ## Segurança dos seus arquivos

@@ -847,6 +847,43 @@ def test_melhorar_tenta_de_novo_o_que_falhou_por_falta_de_memoria():
     assert r["melhoradas"] == 2 and r["erros"] == 1 and "estragado" in r["mensagens"][0], r
 
 
+def test_impressao_digital_que_contradiz_o_nome_do_arquivo_e_descartada():
+    from organizador import identificacao
+    from organizador.provedores import acoustid, musicbrainz
+    from organizador.modelos import Faixa
+    turca = {"fonte": "MusicBrainz", "mbid": "x", "titulo": "Sevdim (original mix)", "artista": "Hülya Avşar", "artista_mbid": "",
+             "album": "Sevdim", "tipo": "Single", "ano": "2000", "duracao": 272.0, "release_id": "", "release_group_id": "", "generos": {}}
+    certa = {**turca, "mbid": "y", "titulo": "Vicious", "artista": "Ibranovski", "album": "Vicious", "ano": "2015"}
+    orig = (acoustid.disponivel, acoustid.impressao, acoustid.consultar, musicbrainz.buscar, musicbrainz.por_id)
+    acoustid.disponivel, acoustid.impressao = (lambda: True), (lambda c: (272, "fp"))
+    acoustid.consultar = lambda cli, chave, d, fp: [{"score": 0.98, "mbid": "x"}]
+    musicbrainz.por_id = lambda cli, mbid, album="": dict(turca if mbid == "x" else certa)
+    try:
+        f = Faixa(caminho="/x/Ibranovski - Vicious (Original Mix) - Spinnin' Records (youtube).mp3", duracao=272.6)
+        musicbrainz.buscar = lambda *a, **k: []
+        r = identificacao.pesquisar_online(f, None, {"acoustid": "k"}, _tmp() / "capas")
+        assert r["cand"] is None, r["cand"]                 # nada de música turca
+        g = Faixa(caminho="/x/faixa 01.mp3", duracao=272.6)  # sem nome útil: aí o som decide
+        r = identificacao.pesquisar_online(g, None, {"acoustid": "k"}, _tmp() / "capas")
+        assert r["cand"]["artista"] == "Hülya Avşar" and r["nota"]["nivel"] == "alta"
+    finally:
+        acoustid.disponivel, acoustid.impressao, acoustid.consultar, musicbrainz.buscar, musicbrainz.por_id = orig
+
+
+def test_migracao_tira_o_que_veio_do_acoustid():
+    tmp = _tmp()
+    servidor.criar_servidor(0, tmp / "c.db", tmp)
+    E = servidor.E
+    from organizador import ajustes
+    from organizador.modelos import Faixa
+    f = Faixa(caminho="/x/vicious.mp3")
+    E.faixas = [f]
+    ajustes.registrar(E.cache, E.cache.sobrescritas(), f, {"titulo": {"novo": "Sevdim", "fonte": "AcoustID", "nivel": "alta"},
+                                                           "genero": {"novo": "Pop", "fonte": "MusicBrainz + Discogs", "nivel": "alta"}})
+    assert f.titulo == "Sevdim" and servidor._migrar_impressao_digital() == 1
+    assert f.titulo == "" and f.genero == "" and E.cache.sobrescritas() == {} and servidor._migrar_impressao_digital() == 0
+
+
 if __name__ == "__main__":
     falhas = 0
     for nome, fn in sorted(globals().items()):

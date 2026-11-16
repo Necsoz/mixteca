@@ -307,6 +307,7 @@ def reaproveitar(saida, pedidos: list[tuple[str, str]], marca=None, refazer: boo
     por_nome: dict[str, list[Path]] | None = None
     usados: set[Path] = set()
     fazer: list[int] = []
+    moveu = False
     for n, pedido in enumerate(pedidos):
         origem, rel = pedido[0], pedido[1]
         outros_nomes = list(pedido[2]) if len(pedido) > 2 else []  # nomes que o arquivo pode ter tido antes (ex.: sem o tom na frente)
@@ -320,9 +321,11 @@ def reaproveitar(saida, pedidos: list[tuple[str, str]], marca=None, refazer: boo
             fazer.append(n)
             continue
         ant = indice.get(origem)
+        # feita com outro volume alvo ou por um jeito antigo de melhorar: o arquivo acompanha a pasta nova, mas é refeito
+        desatualizada = marca is not None and n not in so_arrumar and (not ant or ant.get("marca") != marca)
         if ant:
-            mesma = n in so_arrumar or (ant.get("tam") in (None, sig[0]) and ant.get("mtime") in (None, sig[1]) and ant.get("marca") in (None, marca))
-            if mesma and ant.get("ja_bom"):
+            mesma = n in so_arrumar or (ant.get("tam") in (None, sig[0]) and ant.get("mtime") in (None, sig[1]))
+            if mesma and ant.get("ja_bom") and not desatualizada:
                 cont["ja_bom"] += n not in so_arrumar
                 continue
             velho = saida / ant["rel"] if mesma and ant.get("rel") else None
@@ -347,13 +350,17 @@ def reaproveitar(saida, pedidos: list[tuple[str, str]], marca=None, refazer: boo
                 continue
             novo.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(str(velho), str(novo))
-            cont["movidos"] += 1
+            moveu = True
+            cont["movidos"] += not desatualizada
         else:
-            cont["no_lugar"] += 1
+            cont["no_lugar"] += not desatualizada
         usados.add(novo)
+        if desatualizada:   # já está no lugar certo; a versão nova é gravada por cima
+            fazer.append(n)
+            continue
         guarda = ant if ant and n in so_arrumar else {"tam": sig[0], "mtime": sig[1], "marca": (ant or {}).get("marca")}
         indice[origem] = {**guarda, "rel": Path(rel).as_posix()}
-    if cont["movidos"]:
+    if moveu:
         _apagar_pastas_vazias(saida)
     return [n for n in fazer if n not in so_arrumar], cont, indice
 

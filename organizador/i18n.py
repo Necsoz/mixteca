@@ -150,9 +150,9 @@ TELA_EN: list[tuple[str, str]] = [
      ' Write the title, artist, album, genre and cover found <b>to the copies</b> (the old tags are kept so you can undo)'),
     ('>Copiar músicas</button>', '>Copy music</button>'),
     ('<h2>Melhorar o áudio <small', '<h2>Improve the audio <small'),
-    ('Deixa o volume parecido entre as músicas, corta subgrave inaudível e segura picos que estouram. Gera <b>cópias novas</b> na pasta <b>Melhoradas</b> dentro do destino; '
+    ('Deixa o volume parecido entre as músicas com <b>um ajuste fixo por música</b>, do começo ao fim (sem compressor: o volume não fica subindo e descendo), e corta subgrave inaudível. Se chegar ao volume alvo fizesse a música estourar, ela fica um pouco abaixo do alvo, sem distorcer. Gera <b>cópias novas</b> na pasta <b>Melhoradas</b> dentro do destino; '
      'as outras ficam como estão. Não recupera o que um MP3 de baixa qualidade já perdeu, e a cópia é um MP3 novo (alta qualidade). Leva cerca de 20 segundos por música.',
-     'Evens out the volume across tracks, cuts inaudible sub-bass and tames clipping peaks. Creates <b>new copies</b> in the <b>Improved</b> folder inside the destination; '
+     'Evens out the volume across tracks with <b>one fixed adjustment per track</b>, from start to finish (no compressor: the volume does not keep going up and down), and cuts inaudible sub-bass. If reaching the target volume would make a track clip, it stays slightly below the target, without distortion. Creates <b>new copies</b> in the <b>Improved</b> folder inside the destination; '
      'the others stay as they are. It does not recover what a low-quality MP3 already lost, and the copy is a new (high quality) MP3. Takes about 20 seconds per track.'),
     ('<label>Quais:', '<label>Which:'),
     ('>Só as de qualidade baixa<', '>Only the low-quality ones<'),

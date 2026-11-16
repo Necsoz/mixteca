@@ -18,7 +18,7 @@ Mixteca **only creates copies**. Your original files are never moved, changed or
 - **Suggests a genre** for tracks left without one, by cross-checking other tracks from the same artist, how the track sounds, and the internet. Suggestions are marked as unconfirmed.
 - **Organizes into folders** in the order you choose, with a preview before copying.
 - **Cleans names and tags on the copies:** files become `Artist - Title`, without leftovers from videos or websites, and tags keep only what is useful. BPM and key are written to the tags (mp3 and flac) for DJ software.
-- **Improves the audio (optional):** evens out the volume across tracks, cuts inaudible sub-bass and tames peaks, always in separate copies.
+- **Improves the audio (optional):** evens out the volume across tracks with one fixed adjustment per track (no compressor or limiter, so the volume does not keep going up and down) and cuts inaudible sub-bass, always in separate copies. If reaching the target volume would make a track clip, it stays slightly below the target.
 - **Shows what matches:** click a track in the list to highlight the ones with a compatible key and a similar BPM.
 
 ## Installation
@@ -104,7 +104,7 @@ Keys are stored only on your computer. These services have their own terms and a
 
 - The **key is an estimate**. It is usually right or lands on a neighbouring key on the Camelot wheel, but it can be wrong. Double-check the folders you use most.
 - Remixes, bootlegs and recent releases may be missing from the open sources.
-- Audio improvement does not recover what a low-quality MP3 already lost, and does not fix distortion baked into the file.
+- Audio improvement does not recover what a low-quality MP3 already lost, and does not fix distortion baked into the file. Improved copies made by versions before the fixed adjustment (which used compression and could make the volume fluctuate) are redone automatically the next time you improve the same tracks.
 - With automatic BPM, folder names depend on the tracks you have and may change when you add music (copies are moved to follow).
 
 ## Where data is stored

@@ -1,8 +1,10 @@
 """Melhoria básica de áudio, conservadora, sempre em CÓPIA (o original nunca é alterado).
 
-O que faz: corta subgrave inaudível (abaixo de 25 Hz), deixa o volume parecido entre as músicas
-(normalização de loudness) e segura os picos com um limitador, para não estourar.
-O que NÃO faz: não recupera o que um MP3 ruim já perdeu e não mexe em distorção ou timbre.
+O que faz: corta subgrave inaudível (abaixo de 25 Hz) e deixa o volume parecido entre as músicas com UM ajuste fixo
+de volume por música (o mesmo do começo ao fim). Se chegar ao volume alvo fizesse os picos estourarem, a música fica
+um pouco abaixo do alvo em vez de ser comprimida.
+O que NÃO faz: não usa compressor nem limitador (eles fazem o volume "subir e descer", o efeito gangorra), não
+recupera o que um MP3 ruim já perdeu e não mexe em distorção ou timbre.
 """
 import json
 import math
@@ -12,6 +14,8 @@ from pathlib import Path
 from .ferramentas import achar, executar
 
 ALVO_PADRAO = -10.0  # LUFS
+TETO_PICO = -1.0     # dBTP: o ajuste nunca passa disso
+METODO = "ganho-fixo-v2"   # muda quando o jeito de melhorar muda: o que foi feito pelo método antigo é refeito
 
 
 @lru_cache(maxsize=None)
@@ -63,23 +67,28 @@ def _numero(m: dict, chave: str, padrao: float) -> float:
         return padrao
 
 
+def ganho(entrada_lufs: float, pico_dbtp: float, alvo: float) -> float:
+    """Ajuste fixo (dB) para chegar perto do alvo sem o pico passar do teto."""
+    return round(min(alvo - entrada_lufs, TETO_PICO - pico_dbtp), 2)
+
+
 def melhorar(origem, destino, alvo: float = ALVO_PADRAO) -> dict:
-    """Gera uma cópia melhorada em `destino` (a extensão pode mudar). Só processa se for preciso."""
+    """Gera uma cópia melhorada em `destino` (a extensão pode mudar). Só processa se for preciso.
+
+    Só mede (o loudnorm aqui serve apenas para medir loudness e pico) e aplica um volume fixo: nada de compressão
+    dinâmica, que era o que fazia o volume oscilar."""
     m = _medir(origem, alvo)
     entrada, pico = _numero(m, "input_i", -99.0), _numero(m, "input_tp", 0.0)
-    if entrada <= -70:  # arquivo praticamente mudo: não há o que normalizar
+    medido = math.isfinite(_numero(m, "input_i", math.nan)) and math.isfinite(_numero(m, "input_tp", math.nan))
+    if entrada <= -70 or not medido:  # quase mudo ou medição impossível: melhor não mexer
         return {"status": "ja_bom", "entrada_lufs": entrada, "pico_db": pico}
-    if abs(entrada - alvo) <= 1.5 and pico <= -0.3:
+    g = ganho(entrada, pico, alvo)
+    if abs(g) < 0.5:  # diferença inaudível: não vale gerar outra cópia
         return {"status": "ja_bom", "entrada_lufs": entrada, "pico_db": pico}
     ext, codec = _codec(Path(origem).suffix)
     destino = Path(destino).with_suffix(ext)
     destino.parent.mkdir(parents=True, exist_ok=True)
-    if _medidas_validas(m):
-        norma = (f"loudnorm=I={alvo}:TP=-1:LRA=11:measured_I={m['input_i']}:measured_TP={m['input_tp']}"
-                 f":measured_LRA={m['input_lra']}:measured_thresh={m['input_thresh']}:offset={m['target_offset']}:linear=true")
-    else:  # medição fora da faixa aceita: normaliza em uma passada só (o próprio filtro mede enquanto processa)
-        norma = f"loudnorm=I={alvo}:TP=-1:LRA=11"
-    cadeia = f"highpass=f=25,{norma},alimiter=limit=0.89:level=disabled"
+    cadeia = f"highpass=f=25,volume={g}dB"
     base = [achar("ffmpeg"), "-y", "-v", "error", "-i", str(origem)]
     saida = ["-af", cadeia, "-ar", "44100", *codec, "-map_metadata", "0", str(destino)]
     r = executar(base + ["-map", "0:a:0", "-map", "0:v:0?", "-c:v", "copy"] + saida)  # com a capa
@@ -87,4 +96,4 @@ def melhorar(origem, destino, alvo: float = ALVO_PADRAO) -> dict:
         r = executar(base + ["-map", "0:a:0"] + saida)  # sem a capa
     if r.returncode != 0 or not destino.exists():
         raise RuntimeError(r.stderr.decode(errors="ignore")[-300:] or "falha ao gerar a cópia melhorada")
-    return {"status": "melhorado", "entrada_lufs": entrada, "pico_db": pico, "destino": str(destino)}
+    return {"status": "melhorado", "entrada_lufs": entrada, "pico_db": pico, "ganho_db": g, "destino": str(destino)}

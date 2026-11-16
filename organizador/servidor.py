@@ -384,6 +384,8 @@ def r_melhorar(c):
     alvo = float(c.get("alvo_lufs") or -10)
     if not -20 <= alvo <= -5:
         raise Erro("Volume alvo fora do intervalo permitido.")
+    from .melhoria import METODO
+    marca = f"{METODO}:{alvo}"   # volume alvo + jeito de melhorar: se um dos dois mudar, a melhorada é refeita
     saida = destino / planejador.nome_pasta("Melhoradas", _idioma())
 
     refazer = bool(c.get("refazer"))
@@ -413,7 +415,7 @@ def r_melhorar(c):
             planejador.salvar_indice(saida, indice_m)
         # o que já foi melhorado antes é aproveitado: fica onde está ou é movido para a pasta nova, sem processar de novo
         rels = [Path(i.destino).with_suffix(_codec(Path(i.origem).suffix)[0]).as_posix() for i in itens]
-        fazer, aproveitado, indice = planejador.reaproveitar(saida, [(i.origem, r, [Path(n).with_suffix(Path(r).suffix).name for n in i.outros_nomes]) for i, r in zip(itens, rels)], alvo, refazer, fora)
+        fazer, aproveitado, indice = planejador.reaproveitar(saida, [(i.origem, r, [Path(n).with_suffix(Path(r).suffix).name for n in i.outros_nomes]) for i, r in zip(itens, rels)], marca, refazer, fora)
         cont.update(reaproveitadas=aproveitado["no_lugar"] + aproveitado["movidos"], movidas=aproveitado["movidos"])
         cont["ja_bom"] += aproveitado["ja_bom"]
         total = len(itens) - len(fora)
@@ -423,7 +425,7 @@ def r_melhorar(c):
         def marcar(it, rel=None, ja_bom=False):
             try:
                 st = os.stat(it.origem)
-                indice[it.origem] = {"tam": st.st_size, "mtime": st.st_mtime_ns, "marca": alvo, **({"ja_bom": True} if ja_bom else {"rel": rel})}
+                indice[it.origem] = {"tam": st.st_size, "mtime": st.st_mtime_ns, "marca": marca, **({"ja_bom": True} if ja_bom else {"rel": rel})}
             except OSError:
                 pass
 

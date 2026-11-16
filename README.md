@@ -16,7 +16,7 @@ O Mixteca **só cria cópias**. As músicas originais nunca são movidas, altera
 - **Sugere gênero** para as músicas que ficarem sem, cruzando outras músicas do mesmo artista, a sonoridade e a internet. Sugestões ficam marcadas como não confirmadas.
 - **Organiza em pastas** na ordem que você escolher, com prévia antes de copiar.
 - **Limpa nomes e tags nas cópias:** o arquivo vira `Artista - Título`, sem restos de vídeo ou de sites, e as tags ficam só com o que é útil. BPM e tom são gravados nas tags (mp3 e flac) para programas de DJ.
-- **Melhora o áudio (opcional):** iguala o volume entre as músicas, corta subgrave inaudível e segura picos, sempre em cópias separadas.
+- **Melhora o áudio (opcional):** iguala o volume entre as músicas com um ajuste fixo por música (sem compressor nem limitador, então o volume não fica subindo e descendo) e corta subgrave inaudível, sempre em cópias separadas. Se chegar ao volume alvo fizesse a música estourar, ela fica um pouco abaixo do alvo.
 - **Mostra o que combina:** na lista, clique numa música e veja as de tom compatível e BPM parecido.
 
 ## Instalação
@@ -104,7 +104,7 @@ As chaves ficam guardadas só no seu computador. Esses serviços têm termos pr�
 
 - O **tom é uma estimativa**. Costuma acertar ou cair num tom vizinho na roda Camelot, mas pode errar. Confira nas pastas que mais usa.
 - Remixes, bootlegs e lançamentos recentes podem não existir nas fontes abertas.
-- A melhoria de áudio não recupera o que um MP3 de baixa qualidade já perdeu, nem corrige distorção gravada.
+- A melhoria de áudio não recupera o que um MP3 de baixa qualidade já perdeu, nem corrige distorção gravada. Melhoradas feitas por versões anteriores ao ajuste fixo (que usavam compressão e podiam oscilar o volume) são refeitas sozinhas na próxima vez que você melhorar as mesmas músicas.
 - No BPM automático, os nomes das pastas dependem das músicas que existem e podem mudar quando você adiciona músicas (as cópias são movidas para acompanhar).
 
 ## Onde ficam os dados

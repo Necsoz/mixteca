@@ -117,7 +117,9 @@ def test_melhoria_aguenta_medicao_fora_da_faixa():
     alto = tmp / "alto.wav"
     subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "aevalsrc=exprs='4*sgn(sin(2*PI*1000*t))':d=6:s=44100", "-c:a", "pcm_f32le", str(alto)], check=True)
     r = melhoria.melhorar(alto, tmp / "saida" / "alto.wav")
-    assert r["status"] == "melhorado" and Path(r["destino"]).stat().st_size > 1000, r
+    assert r["status"] == "melhorado" and Path(r["destino"]).stat().st_size > 1000 and r["ganho_db"] < -20, r
+    # o ajuste é sempre um volume fixo: chega ao alvo sem passar do teto de pico
+    assert melhoria.ganho(-14.0, -6.0, -10.0) == 4.0 and melhoria.ganho(-14.0, -2.0, -10.0) == 1.0 and melhoria.ganho(-6.0, 0.5, -10.0) == -4.0
 
 
 def test_bpm_automatico_junta_vizinhos_com_poucas_musicas():
@@ -148,26 +150,33 @@ def test_reaproveitar_pasta_de_melhoradas_antiga_sem_refazer():
         (saida / rel).write_bytes(b"melhorada " + rel.encode())
     pedidos = [(str(origem / "a.mp3"), "Big Room/126-127 BPM/08A/Art - A.mp3"), (str(origem / "b.mp3"), "Big Room/126-127 BPM/08A/Art - B.mp3"),
                (str(origem / "c.mp3"), "Big Room/126-127 BPM/08A/Art - C.mp3"), (str(origem / "nova.mp3"), "Dubstep/140 BPM/06A/Art - Nova.mp3")]
-    fazer, cont, indice = planejador.reaproveitar(saida, pedidos, -10.0)
+    fazer, cont, indice = planejador.reaproveitar(saida, pedidos, None)
     assert fazer == [2, 3] and cont["movidos"] == 2                      # só as duas que faltam precisam ser processadas
     assert (saida / "Big Room/126-127 BPM/08A/Art - A.mp3").read_bytes().startswith(b"melhorada")
     assert not (saida / "Big Room/126 BPM").exists()                     # pasta antiga vazia some
     planejador.salvar_indice(saida, indice)
-    fazer2, cont2, _ = planejador.reaproveitar(saida, pedidos[:2], -10.0)
+    fazer2, cont2, _ = planejador.reaproveitar(saida, pedidos[:2], None)
     assert fazer2 == [] and cont2["no_lugar"] == 2                       # rodar de novo: nada a fazer
     (origem / "a.mp3").write_bytes(b"arquivo baixado de novo, diferente")  # original trocado: essa é refeita
-    assert planejador.reaproveitar(saida, pedidos[:2], -10.0)[0] == [0]
-    assert planejador.reaproveitar(saida, pedidos[:2], -10.0, refazer=True)[0] == [0, 1]
+    assert planejador.reaproveitar(saida, pedidos[:2], None)[0] == [0]
+    assert planejador.reaproveitar(saida, pedidos[:2], None, refazer=True)[0] == [0, 1]
     # fora da escolha desta vez (ex.: só as de qualidade baixa): não é refeita, mas o que já existia acompanha a pasta nova
-    fo, co, io = planejador.reaproveitar(saida, [(pedidos[0][0], "Novo/a.mp3"), (pedidos[1][0], "Novo/b.mp3"), (str(origem / "nunca.mp3"), "Novo/n.mp3")], -10.0, so_arrumar={1, 2})
+    fo, co, io = planejador.reaproveitar(saida, [(pedidos[0][0], "Novo/a.mp3"), (pedidos[1][0], "Novo/b.mp3"), (str(origem / "nunca.mp3"), "Novo/n.mp3")], None, so_arrumar={1, 2})
     assert fo == [0] and co["movidos"] == 1 and (saida / "Novo/b.mp3").is_file() and io[pedidos[1][0]]["rel"] == "Novo/b.mp3"
     planejador.salvar_indice(saida, io)
     # pasta antiga + opção nova de tom no nome do arquivo: ainda acha pelo nome antigo, move e renomeia
     velha = tmp / "M2"
     (velha / "Rock/100 BPM/01A").mkdir(parents=True)
     (velha / "Rock/100 BPM/01A/Art - Z.mp3").write_bytes(b"melhorada z")
-    fz, cz, _ = planejador.reaproveitar(velha, [(str(origem / "b.mp3"), "Rock/100 BPM/01A - Art - Z.mp3", ["Art - Z.mp3"])], -10.0)
+    fz, cz, _ = planejador.reaproveitar(velha, [(str(origem / "b.mp3"), "Rock/100 BPM/01A - Art - Z.mp3", ["Art - Z.mp3"])], None)
     assert fz == [] and cz["movidos"] == 1 and (velha / "Rock/100 BPM/01A - Art - Z.mp3").read_bytes() == b"melhorada z"
+    # melhorada feita com outro volume ou pelo jeito antigo de melhorar: acompanha a pasta nova, mas é refeita
+    ref = tmp / "R"
+    (ref / "Rock").mkdir(parents=True)
+    (ref / "Rock/Art - Z.mp3").write_bytes(b"antiga")
+    planejador.salvar_indice(ref, {str(origem / "b.mp3"): {"rel": "Rock/Art - Z.mp3", "marca": "metodo-antigo:-10.0"}})
+    fr, cr, ir = planejador.reaproveitar(ref, [(str(origem / "b.mp3"), "Pop/Art - Z.mp3")], "ganho-fixo-v2:-10.0")
+    assert fr == [0] and (ref / "Pop/Art - Z.mp3").is_file() and not (ref / "Rock").exists()
 
 
 def test_ordem_de_pastas_montada_pelo_usuario():

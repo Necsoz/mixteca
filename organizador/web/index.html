@@ -113,6 +113,8 @@ button.ed:hover{border-color:var(--acc);color:var(--txt)}button.ed.u{color:var(-
 #niveis-on .nivel:not(:last-child)::after{content:"→";color:var(--mut);margin-left:6px;font-weight:400}
 .nivel .x{color:var(--mut);font-weight:400}
 .nivel.arrastando{opacity:.4}
+#rep-corpo td{white-space:normal;max-width:none}
+#rep-corpo select{max-width:100%}
 .nivel:disabled,.pad:disabled{opacity:.4;cursor:not-allowed}
 select:disabled{opacity:.45;cursor:not-allowed}
 .gp{background:var(--card2);border:1px solid var(--bd);border-radius:12px;padding:10px 12px;margin-bottom:8px}
@@ -195,8 +197,8 @@ select:disabled{opacity:.45;cursor:not-allowed}
 
 <section id="srep" class="off fora" data-p="2">
   <h2>Músicas repetidas <small style="color:var(--mut);font-weight:400">(<span id="rep-n">0</span>)</small></h2>
-  <p class="hint">Músicas que já foram organizadas antes neste destino (vindas de outra pasta) ou que aparecem mais de uma vez na própria pasta das músicas. Para cada uma o programa sugere ficar com a de <b>qualidade melhor</b>; mude o que quiser. Nada é apagado: quando a nova entra no lugar de uma que já estava no destino, a antiga vai para a pasta <b>Substituídas</b>. Repetidas na própria pasta só deixam de ser copiadas.</p>
-  <div class="fila"><button id="b-rep-sug" class="mini">Seguir as sugestões</button><button id="b-rep-dest" class="mini">Manter todas as do destino</button><button id="b-rep-nova" class="mini">Trocar todas pelas novas</button><small id="rep-msg" style="align-self:center;color:var(--mut)" role="status"></small></div>
+  <p class="hint">Músicas que já foram organizadas antes neste destino (vindas de outra pasta) ou que aparecem mais de uma vez na própria pasta das músicas. Para cada uma o programa sugere ficar com a de <b>qualidade melhor</b>; mude o que quiser. Nada é apagado: quando a nova entra no lugar de uma que já estava no destino, a antiga vai para a pasta <b>Substituídas</b>. Repetidas na própria pasta só deixam de ser copiadas. <b>Outras versões</b> da mesma música (por exemplo Extended e Radio Edit) também aparecem aqui: por padrão ficam as duas, mas você pode ficar só com uma.</p>
+  <div class="fila"><button id="b-rep-sug" class="mini">Seguir as sugestões</button><button id="b-rep-dest" class="mini">Manter todas as do destino</button><button id="b-rep-nova" class="mini">Trocar todas pelas novas</button><span id="rep-ver-bts" style="display:none;gap:8px;flex-wrap:wrap"><button id="b-rep-longa" class="mini">Outras versões: ficar só com a mais longa</button><button id="b-rep-duas" class="mini">Outras versões: manter as duas</button></span><small id="rep-msg" style="align-self:center;color:var(--mut)" role="status"></small></div>
   <div class="tw"><table><thead><tr><th>Música</th><th>A outra versão</th><th>Esta</th><th>Ficar com</th></tr></thead><tbody id="rep-corpo"></tbody></table></div>
 </section>
 
@@ -379,10 +381,11 @@ async function carregar(rolar=true){
 
 /* ---------- músicas repetidas (já estão no destino, vindas de outra pasta) ---------- */
 let reps=[];
+const verTxt=q=>q.versao?`<b>${esc(q.versao)}</b> · `:"";
 const durTxt=s=>s?`${Math.floor(s/60)}:${String(Math.round(s%60)).padStart(2,"0")}`:"";
 const qualTxt=q=>(q.sem_perdas?"sem perdas":q.kbps?`${q.kbps} kbps`:"?")+(q.baixa?" ⚠":"");
-const MOTIVO_REP={melhor:"a nova tem qualidade melhor",pior:"a do destino tem qualidade melhor",parecida:"qualidade parecida: fica a do destino",desconhecida:"no destino só há a cópia melhorada: fica ela"};
-const MOTIVO_REP_ORIGEM={melhor:"esta tem qualidade melhor",pior:"a outra tem qualidade melhor",parecida:"qualidade parecida: fica a outra"};
+const MOTIVO_REP={versao:"versões diferentes: ficam as duas",melhor:"a nova tem qualidade melhor",pior:"a do destino tem qualidade melhor",parecida:"qualidade parecida: fica a do destino",desconhecida:"no destino só há a cópia melhorada: fica ela"};
+const MOTIVO_REP_ORIGEM={versao:"versões diferentes: ficam as duas",melhor:"esta tem qualidade melhor",pior:"a outra tem qualidade melhor",parecida:"qualidade parecida: fica a outra"};
 async function carregarRepetidas(){
   try{reps=(await api("/api/repetidas",params())).itens}catch(e){reps=[]}
   desenharRepetidas();
@@ -392,9 +395,10 @@ function desenharRepetidas(){
   const n=k=>reps.filter(r=>r.escolha===k).length;
   $("#rep-msg").textContent=reps.length?`${n("destino")} ficam com a outra versão, ${n("nova")} com esta, ${n("ambas")} com as duas.`:"";
   const opc=(r,i)=>`<select data-i="${i}" aria-label="Com qual ficar: ${esc(r.nome)}">`+(r.na_origem?[["destino","Ficar com a outra"],["nova","Ficar com esta"],["ambas","Manter as duas"]]:[["destino","Manter a do destino"],["nova","Trocar pela nova"],["ambas","Manter as duas"]]).map(([v,t])=>`<option value="${v}" ${r.escolha===v?"selected":""}>${t}</option>`).join("")+`</select>`;
-  $("#rep-corpo").innerHTML=reps.slice(0,500).map((r,i)=>`<tr><td title="${esc(r.nova.arquivo)}">${esc(r.nome)}</td>`+
-    `<td title="${esc(r.destino.copia||r.destino.melhorada||r.destino.origem_antiga||"")}"><small style="color:var(--mut)">${r.na_origem?"na mesma pasta: "+esc(r.destino.arquivo):"no destino"}</small><br>${qualTxt(r.destino)} · ${durTxt(r.destino.duracao)}${r.destino.so_melhorada?" <small>(melhorada)</small>":""}</td>`+
-    `<td title="${esc(r.nova.arquivo)}"><small style="color:var(--mut)">${esc(r.nova.arquivo)}</small><br>${qualTxt(r.nova)} · ${durTxt(r.nova.duracao)}</td>`+
+  $("#rep-ver-bts").style.display=reps.some(r=>r.outra_versao)?"flex":"none";
+  $("#rep-corpo").innerHTML=reps.slice(0,500).map((r,i)=>`<tr><td title="${esc(r.nova.arquivo)}">${esc(r.nome)}${r.outra_versao?' <span class="badge b-media">outra versão</span>':""}</td>`+
+    `<td title="${esc(r.destino.copia||r.destino.melhorada||r.destino.origem_antiga||"")}"><small style="color:var(--mut)">${r.na_origem?"na mesma pasta: "+esc(r.destino.arquivo):"no destino"}</small><br>${verTxt(r.destino)}${qualTxt(r.destino)} · ${durTxt(r.destino.duracao)}${r.destino.so_melhorada?" <small>(melhorada)</small>":""}</td>`+
+    `<td title="${esc(r.nova.arquivo)}"><small style="color:var(--mut)">${esc(r.nova.arquivo)}</small><br>${verTxt(r.nova)}${qualTxt(r.nova)} · ${durTxt(r.nova.duracao)}</td>`+
     `<td style="white-space:normal">${opc(r,i)} <small style="color:var(--mut)">${r.escolhida?"sua escolha":"sugestão: "+((r.na_origem?MOTIVO_REP_ORIGEM:MOTIVO_REP)[r.motivo]||"")}</small></td></tr>`).join("")+
     (reps.length>500?`<tr><td colspan="4" class="hint">Mostrando 500 de ${reps.length}. Os botões acima valem para todas.</td></tr>`:"");
   document.querySelectorAll("#rep-corpo select").forEach(s=>s.onchange=()=>escolherRepetidas({itens:[{id:reps[+s.dataset.i].id,escolha:s.value}]}));
@@ -663,7 +667,7 @@ async function pausar(){const {job}=await api("/api/estado");await api("/api/pau
 $("#b-origem").onclick=()=>escolher("#origem","Pasta com as músicas");
 $("#b-destino").onclick=()=>escolher("#destino","Pasta de destino");
 $("#destino").addEventListener("change",()=>{if(faixas.length)carregarRepetidas()});
-$("#b-rep-sug").onclick=()=>escolherRepetidas({todas:"sugestao"}); $("#b-rep-dest").onclick=()=>escolherRepetidas({todas:"destino"}); $("#b-rep-nova").onclick=()=>escolherRepetidas({todas:"nova"});
+$("#b-rep-sug").onclick=()=>escolherRepetidas({todas:"sugestao"}); $("#b-rep-dest").onclick=()=>escolherRepetidas({todas:"destino"}); $("#b-rep-nova").onclick=()=>escolherRepetidas({todas:"nova"}); $("#b-rep-longa").onclick=()=>escolherRepetidas({versoes:"longa"}); $("#b-rep-duas").onclick=()=>escolherRepetidas({versoes:"ambas"});
 $("#b-analisar").onclick=analisar; $("#b-copiar").onclick=copiar; $("#b-melhorar").onclick=melhorar;
 $("#b-cancelar").onclick=()=>api("/api/cancelar",{}).then(checar); $("#b-pausar").onclick=pausar;
 $("#b-desfazer").onclick=async()=>{const f=faixas[selecionada];if(!f)return;await api("/api/desfazer",{caminhos:[f.caminho]});await carregar(false)};

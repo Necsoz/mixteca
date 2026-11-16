@@ -296,8 +296,17 @@ def r_repetidas(c):
 
 def r_repetidas_escolher(c):
     """Escolha de uma repetida (ou de todas): manter a do destino, trocar pela nova, manter as duas ou seguir a sugestão."""
-    pedidos = [(r["id"], c.get("todas")) for r in E.repetidas] if c.get("todas") else \
-              [(x.get("id") or x.get("caminho"), x.get("escolha")) for x in c.get("itens") or []]
+    lista = _repetidas_com_escolha()
+    if c.get("versoes") == "longa":     # outras versões: fica só a mais longa (normalmente a Extended)
+        pedidos = [(r["id"], "nova" if (r["nova"]["duracao"] or 0) > (r["destino"]["duracao"] or 0) else "destino") for r in lista if r.get("outra_versao")]
+    elif c.get("versoes") in repetidas.ESCOLHAS or c.get("versoes") == "sugestao":
+        pedidos = [(r["id"], c["versoes"]) for r in lista if r.get("outra_versao")]
+    elif c.get("todas") == "sugestao":
+        pedidos = [(r["id"], "sugestao") for r in lista]
+    elif c.get("todas"):                # "manter todas as do destino" / "trocar todas": só as repetidas de verdade
+        pedidos = [(r["id"], c["todas"]) for r in lista if not r.get("outra_versao")]
+    else:
+        pedidos = [(x.get("id") or x.get("caminho"), x.get("escolha")) for x in c.get("itens") or []]
     validos = {r["id"] for r in E.repetidas}
     for caminho, escolha in pedidos:
         if caminho in validos and (escolha in repetidas.ESCOLHAS or escolha == "sugestao"):

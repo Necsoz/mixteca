@@ -381,13 +381,17 @@ def test_repetidas_de_outra_pasta():
     ler = lambda c: info.get(c) or {"duracao": next((f.duracao for f in antigas if Path(c).name.endswith(Path(f.caminho).name)), 0)}  # noqa: E731
     ja = repetidas.existentes(dest, dest / "Melhoradas")
     achadas = {Path(r["caminho"]).name: r for r in repetidas.detectar(plano, {f.caminho: f for f in novas}, ja, ler)}
-    assert set(achadas) == {"tora.mp3", "lc.mp3"}, achadas.keys()
+    assert set(achadas) == {"tora.mp3", "lc.mp3", "lv.mp3"}, achadas.keys()
     assert achadas["tora.mp3"]["sugestao"] == "nova" and achadas["lc.mp3"]["sugestao"] == "destino"
+    # Extended x Radio Edit: outra versão; por padrão ficam as duas, mas dá para escolher só uma
+    lv = achadas["lv.mp3"]
+    assert lv["outra_versao"] and lv["sugestao"] == "ambas" and lv["nova"]["versao"] == "Extended Mix" and lv["destino"]["versao"] == "Radio Edit"
+    assert not achadas["tora.mp3"]["outra_versao"] and repetidas.versao("Tora - Extended Mix") == "Extended Mix" and repetidas.versao("Levels (Skrillex Remix)") == ""
     # o mesmo destino organizado de novo com a mesma pasta não tem repetidas
     assert repetidas.detectar(planejador.planejar(antigas, "A", ordem=["genero"]), {f.caminho: f for f in antigas}, ja, ler) == []
     mapa = {r["caminho"]: {**r["destino"], "escolha": r["sugestao"]} for r in achadas.values()}
     res = planejador.executar(plano, dest, repetidas=mapa)
-    assert res["repetidas_mantidas"] == 1 and res["substituidas"] == 1 and res["copiados"] == 4
+    assert res["repetidas_mantidas"] == 1 and res["substituidas"] == 1 and res["copiados"] == 4   # a Extended entra junto da Radio Edit
     nomes = sorted(p.relative_to(dest).as_posix() for p in dest.rglob("*.mp3"))
     assert "Substituídas/Big Room/Kura - Tora.mp3" in nomes and "Big Room/KURA - Tora (Original Mix).mp3" in nomes
     assert "Big Room/Maddix - Lose Control.mp3" in nomes and not any("(2)" in n for n in nomes)
@@ -396,7 +400,10 @@ def test_repetidas_de_outra_pasta():
     duas = [faixa(nova, "x1.mp3", "Tora", "Kura", 200, 128), faixa(nova, "x2.mp3", "Tora (Original Mix)", "Kura", 201, 320),
             faixa(nova, "x3.mp3", "Tora (Extended Mix)", "Kura", 320, 320)]
     p2 = planejador.planejar(duas, "A", ordem=["genero"])
-    na = repetidas.detectar_na_origem(p2, {f.caminho: f for f in duas})
+    todas = repetidas.detectar_na_origem(p2, {f.caminho: f for f in duas})
+    na = [r for r in todas if not r["outra_versao"]]
+    ver = [r for r in todas if r["outra_versao"]]
+    assert len(ver) == 1 and ver[0]["sugestao"] == "ambas" and {Path(ver[0]["caminho"]).name, Path(ver[0]["destino"]["origem_antiga"]).name} == {"x2.mp3", "x3.mp3"}
     assert len(na) == 1 and Path(na[0]["caminho"]).name == "x1.mp3" and Path(na[0]["destino"]["origem_antiga"]).name == "x2.mp3"
     assert na[0]["sugestao"] == "destino" and na[0]["motivo"] == "pior"
     assert repetidas.pular([{**na[0], "escolha": "destino"}]) == {duas[0].caminho}

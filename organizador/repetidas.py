@@ -22,6 +22,16 @@ _PREFIXO = re.compile(r"^(?:\d{3} - )?(?:\d{2}[AB] - )?")       # "128 - 08A - "
 _VERSAO_PADRAO = re.compile(r"[\(\[]\s*(?:original|extended|radio|club|album|single)?\s*(?:mix|edit|version)\s*[\)\]]", re.I)
 
 
+_VERSAO_TEXTO = re.compile(r"[\(\[]\s*((?:original|extended|radio|club|album|single)?\s*(?:mix|edit|version))\s*[\)\]]"
+                           r"|\s-\s((?:original|extended|radio|club|album|single)\s*(?:mix|edit|version)?)\s*$", re.I)
+
+
+def versao(titulo: str) -> str:
+    """Versão escrita no título ("Extended Mix", "Radio Edit"...); vazio se não houver."""
+    m = _VERSAO_TEXTO.search(titulo or "")
+    return (m.group(1) or m.group(2) or "").strip().title() if m else ""
+
+
 def _chave_titulo(titulo: str) -> str:
     """Título comparável: sem "(Original Mix)" e afins, mas mantendo remix/bootleg/VIP (são outras músicas)."""
     return casamento.norm(_VERSAO_PADRAO.sub(" ", titulo or ""), tirar_versao=False)
@@ -112,17 +122,24 @@ def detectar(itens, por_caminho: dict, ja_existe: list[dict], ler_info, faixa_an
     with ThreadPoolExecutor(max_workers=6) as pool:
         lidos = dict(zip(arquivos, pool.map(lambda p: _ler(ler_info, p), arquivos)))
 
+    def _ref(e):
+        orig_ok = Path(e["origem_antiga"]).is_file()
+        ref = lidos.get(e["origem_antiga"]) if orig_ok else None
+        return orig_ok, ref or lidos.get(e["copia"] or e["melhorada"]) or {}
+
+    def _outra_versao(it, e):
+        f, dur = por_caminho.get(it.origem), _ref(e)[1].get("duracao") or 0
+        return bool(f and f.duracao and dur and abs(f.duracao - dur) > TOLERANCIA_S)
+
+    pares.sort(key=lambda p: _outra_versao(*p))   # para cada música, a repetida exata vem antes da outra versão
     saida, usados = [], set()
     for it, e in pares:
         f = por_caminho.get(it.origem)
         if f is None or it.origem in usados:
             continue
-        orig_ok = Path(e["origem_antiga"]).is_file()
-        ref = lidos.get(e["origem_antiga"]) if orig_ok else None
-        ref = ref or lidos.get(e["copia"] or e["melhorada"]) or {}
+        orig_ok, ref = _ref(e)
         dur = ref.get("duracao") or 0
-        if f.duracao and dur and abs(f.duracao - dur) > TOLERANCIA_S:
-            continue
+        outra = _outra_versao(it, e)
         antiga = faixa_antiga(e["origem_antiga"]) if (faixa_antiga and orig_ok) else None
         # qualidade do que está no destino: do original antigo (se existir) ou da cópia; a melhorada foi recodificada,
         # então os kbps dela não dizem a qualidade de verdade
@@ -132,12 +149,13 @@ def detectar(itens, por_caminho: dict, ja_existe: list[dict], ler_info, faixa_an
         cmp = 0 if so_melhorada else comparar(q_nova, q_dest)
         usados.add(it.origem)
         saida.append({
-            "id": it.origem, "caminho": it.origem, "nome": it.nome or Path(it.origem).stem,
-            "nova": {"arquivo": Path(it.origem).name, "duracao": f.duracao, **q_nova},
-            "destino": {"copia": e["copia"], "melhorada": e["melhorada"], "origem_antiga": e["origem_antiga"],
+            "id": it.origem, "caminho": it.origem, "nome": it.nome or Path(it.origem).stem, "outra_versao": outra,
+            "nova": {"arquivo": Path(it.origem).name, "duracao": f.duracao, "versao": versao((it.tags or {}).get("titulo")), **q_nova},
+            "destino": {"copia": e["copia"], "melhorada": e["melhorada"], "origem_antiga": e["origem_antiga"], "versao": versao(e["titulo"]),
                         "arquivo": Path(e["copia"] or e["melhorada"]).name, "duracao": dur, "so_melhorada": so_melhorada, **q_dest},
-            "sugestao": "nova" if cmp > 0 else "destino",
-            "motivo": "melhor" if cmp > 0 else ("pior" if cmp < 0 else ("desconhecida" if so_melhorada else "parecida")),
+            # outra versão (Extended x Radio Edit): por padrão ficam as duas; a escolha pode deixar só uma
+            "sugestao": "ambas" if outra else ("nova" if cmp > 0 else "destino"),
+            "motivo": "versao" if outra else ("melhor" if cmp > 0 else ("pior" if cmp < 0 else ("desconhecida" if so_melhorada else "parecida"))),
         })
     return saida
 
@@ -158,21 +176,27 @@ def detectar_na_origem(itens, por_caminho: dict) -> list[dict]:
         chave = _chave_titulo(tags.get("titulo") or "")
         if not chave:
             continue
-        par = next((p for p in principais.get(chave, [])
-                    if (casamento.sim_artistas(tags.get("artista") or "", (p.tags or {}).get("artista") or "") >= 0.8)
-                    and not (f.duracao and por_caminho[p.origem].duracao and abs(f.duracao - por_caminho[p.origem].duracao) > TOLERANCIA_S)), None)
+        mesmos = [p for p in principais.get(chave, [])
+                  if casamento.sim_artistas(tags.get("artista") or "", (p.tags or {}).get("artista") or "") >= 0.8]
+        longe = lambda p: bool(f.duracao and por_caminho[p.origem].duracao and abs(f.duracao - por_caminho[p.origem].duracao) > TOLERANCIA_S)  # noqa: E731
+        par = next((p for p in mesmos if not longe(p)), None)
+        outra = par is None and bool(mesmos)
         if par is None:
-            principais.setdefault(chave, []).append(it)
-            continue
+            principais.setdefault(chave, []).append(it)   # outra versão também é principal do próprio grupo
+            if not outra:
+                continue
+            par = mesmos[0]
         fp = por_caminho[par.origem]
         cmp = comparar(qualidade[it.origem], qualidade[par.origem])
         saida.append({
             "id": "na_origem:" + it.origem, "caminho": it.origem, "nome": it.nome or Path(it.origem).stem, "na_origem": True,
-            "nova": {"arquivo": Path(it.origem).name, "duracao": f.duracao, **qualidade[it.origem]},
+            "outra_versao": outra,
+            "nova": {"arquivo": Path(it.origem).name, "duracao": f.duracao, "versao": versao(tags.get("titulo")), **qualidade[it.origem]},
             "destino": {"copia": None, "melhorada": None, "origem_antiga": par.origem, "arquivo": Path(par.origem).name,
+                        "versao": versao((par.tags or {}).get("titulo")),
                         "duracao": fp.duracao, "so_melhorada": False, "na_origem": True, **qualidade[par.origem]},
-            "sugestao": "nova" if cmp > 0 else "destino",
-            "motivo": "melhor" if cmp > 0 else ("pior" if cmp < 0 else "parecida"),
+            "sugestao": "ambas" if outra else ("nova" if cmp > 0 else "destino"),
+            "motivo": "versao" if outra else ("melhor" if cmp > 0 else ("pior" if cmp < 0 else "parecida")),
         })
     return saida
 

@@ -11,7 +11,7 @@ O Mixteca **só cria cópias**. As músicas originais nunca são movidas, altera
 ## O que ele faz
 
 - **Analisa o áudio:** BPM (sempre inteiro) e tom na notação Camelot, sem precisar tocar as músicas.
-- **Completa as informações:** procura sozinho nome, artista, álbum, ano, gênero e capa do que estiver faltando.
+- **Completa as informações:** procura sozinho nome, artista, álbum, ano, gênero e capa do que estiver faltando. Capa, álbum e ano nunca vêm de coletâneas (como "Hits do Verão"), só de lançamentos do próprio artista.
 - **Respeita o que já existe:** tags preenchidas e plausíveis não são mexidas. Só é corrigido o que é claramente lixo (por exemplo, gênero "Unknown" ou nome de site no título).
 - **Sugere gênero** para as músicas que ficarem sem, cruzando outras músicas do mesmo artista, a sonoridade e a internet. Sugestões ficam marcadas como não confirmadas.
 - **Organiza em pastas** na ordem que você escolher, com prévia antes de copiar.
@@ -102,7 +102,7 @@ As chaves ficam guardadas só no seu computador. Esses serviços têm termos pr�
 
 ## Limites
 
-- O **tom é uma estimativa**. Costuma acertar ou cair num tom vizinho na roda Camelot, mas pode errar. Confira nas pastas que mais usa.
+- O **tom é uma estimativa**. Comparado com o que o djay mostra numa biblioteca de EDM, o Mixteca deu o mesmo tom em cerca de 7 de cada 10 músicas e um tom compatível (vizinho na roda Camelot) em cerca de 9 de cada 10. Confira nas pastas que mais usa.
 - Remixes, bootlegs e lançamentos recentes podem não existir nas fontes abertas.
 - A melhoria de áudio não recupera o que um MP3 de baixa qualidade já perdeu, nem corrige distorção gravada. Melhoradas feitas por versões anteriores ao ajuste fixo (que usavam compressão e podiam oscilar o volume) são refeitas sozinhas na próxima vez que você melhorar as mesmas músicas.
 - No BPM automático, os nomes das pastas dependem das músicas que existem e podem mudar quando você adiciona músicas (as cópias são movidas para acompanhar).

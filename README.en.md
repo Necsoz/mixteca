@@ -13,7 +13,7 @@ Mixteca **only creates copies**. Your original files are never moved, changed or
 ## What it does
 
 - **Analyzes the audio:** BPM (always a whole number) and key in Camelot notation, without playing the tracks.
-- **Fills in information:** looks up title, artist, album, year, genre and cover art for whatever is missing.
+- **Fills in information:** looks up title, artist, album, year, genre and cover art for whatever is missing. Cover art, album and year never come from compilations (such as "Summer Hits"), only from the artist's own releases.
 - **Respects what is already there:** tags that are filled in and plausible are left alone. Only obvious junk is fixed (for example, an "Unknown" genre or a website name in the title).
 - **Suggests a genre** for tracks left without one, by cross-checking other tracks from the same artist, how the track sounds, and the internet. Suggestions are marked as unconfirmed.
 - **Organizes into folders** in the order you choose, with a preview before copying.
@@ -102,7 +102,7 @@ Keys are stored only on your computer. These services have their own terms and a
 
 ## Limits
 
-- The **key is an estimate**. It is usually right or lands on a neighbouring key on the Camelot wheel, but it can be wrong. Double-check the folders you use most.
+- The **key is an estimate**. Compared with what djay shows on an EDM library, Mixteca gave the same key for about 7 in 10 tracks and a compatible key (a neighbour on the Camelot wheel) for about 9 in 10. Double-check the folders you use most.
 - Remixes, bootlegs and recent releases may be missing from the open sources.
 - Audio improvement does not recover what a low-quality MP3 already lost, and does not fix distortion baked into the file. Improved copies made by versions before the fixed adjustment (which used compression and could make the volume fluctuate) are redone automatically the next time you improve the same tracks.
 - With automatic BPM, folder names depend on the tracks you have and may change when you add music (copies are moved to follow).

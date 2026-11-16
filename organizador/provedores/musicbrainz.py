@@ -19,27 +19,42 @@ def _artistas(credito: list) -> tuple[str, str]:
     return nome.strip(), primeiro
 
 
-def escolher_lancamento(releases: list, album_atual: str = "") -> dict | None:
-    """Escolhe o lançamento mais provável: o mesmo álbum da tag, senão o oficial mais antigo que não seja coletânea/ao vivo."""
-    if not releases:
-        return None
-    from .. import casamento
+VARIOS_ARTISTAS = "89ad4ac3-39f7-470e-963a-56509c546377"   # "Various Artists" no MusicBrainz
+_NAO_E_DO_ARTISTA = {"Compilation", "Live", "Remix", "DJ-mix", "Mixtape/Street"}
 
-    def tipo(r):
-        g = r.get("release-group") or {}
-        return g.get("primary-type") or "", set(g.get("secondary-types") or [])
+
+def coletanea(r: dict) -> bool:
+    """Coletânea, ao vivo, mixtape ou lançamento de vários artistas: o nome, o ano e a capa são da coletânea, não da música."""
+    g = r.get("release-group") or {}
+    if set(g.get("secondary-types") or []) & _NAO_E_DO_ARTISTA:
+        return True
+    return any((c.get("artist") or {}).get("id") == VARIOS_ARTISTAS or (c.get("name") or "").casefold() == "various artists"
+               for c in r.get("artist-credit") or [])
+
+
+def escolher_lancamento(releases: list, album_atual: str = "") -> tuple[dict | None, bool]:
+    """Escolhe o lançamento mais provável: o mesmo álbum da tag, senão o oficial mais antigo que não seja coletânea.
+    Devolve (lançamento, confiável); confiável=False quando só há coletâneas: aí nome, ano e capa não servem."""
+    if not releases:
+        return None, False
+    from .. import casamento
 
     if album_atual:
         for r in releases:
-            if casamento.sim(album_atual, r.get("title", "")) >= 0.9:
-                return r
-    bons = [r for r in releases if r.get("status", "Official") == "Official" and not (tipo(r)[1] & {"Compilation", "Live", "Remix", "DJ-mix", "Mixtape/Street"})]
-    return sorted(bons or releases, key=lambda r: (r.get("date") or "9999") or "9999")[0]
+            if casamento.sim(album_atual, r.get("title", "")) >= 0.9 and not coletanea(r):
+                return r, True
+    bons = [r for r in releases if r.get("status", "Official") == "Official" and not coletanea(r)]
+    bons = bons or [r for r in releases if not coletanea(r)]
+    if not bons:
+        return sorted(releases, key=lambda r: (r.get("date") or "9999") or "9999")[0], False
+    return sorted(bons, key=lambda r: (r.get("date") or "9999") or "9999")[0], True
 
 
 def candidato_de_gravacao(g: dict, album_atual: str = "") -> dict:
     artista, artista_id = _artistas(g.get("artist-credit"))
-    rel = escolher_lancamento(g.get("releases") or [], album_atual)
+    rel, confiavel = escolher_lancamento(g.get("releases") or [], album_atual)
+    if not confiavel:   # só coletâneas na lista: não usa nome, ano nem capa delas
+        rel = None
     grupo = (rel or {}).get("release-group") or {}
     tags = {t["name"]: int(t.get("count", 1) or 1) for t in (g.get("tags") or []) if t.get("name")}
     for ge in g.get("genres") or []:
@@ -49,7 +64,7 @@ def candidato_de_gravacao(g: dict, album_atual: str = "") -> dict:
         "album": (rel or {}).get("title", ""), "tipo": grupo.get("primary-type", ""),
         "ano": ((rel or {}).get("date") or "")[:4], "duracao": (g.get("length") or 0) / 1000.0,
         "release_id": (rel or {}).get("id", ""), "release_group_id": grupo.get("id", ""),
-        "generos": {}, "tags_gravacao": tags,
+        "generos": {}, "tags_gravacao": tags, "sem_lancamento": rel is None and bool(g.get("releases")),
     }
 
 

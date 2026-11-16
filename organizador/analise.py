@@ -15,9 +15,11 @@ from .tags import ler_info
 SR = 44100
 JANELA_S = 90
 
-# Perfis de tonalidade de Krumhansl-Kessler (índice 0 = tônica)
-PERFIL_MAIOR = np.array([6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88])
-PERFIL_MENOR = np.array([6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17])
+# Perfis de tonalidade (índice 0 = tônica). Os de Sha'ath (KeyFinder) foram feitos a partir de música eletrônica e,
+# comparados com o tom que o djay mostra numa biblioteca real de EDM, acertaram bem mais que os de Krumhansl-Kessler
+# (que vêm de música clássica): ~75% iguais e ~90% compatíveis, contra ~40% iguais.
+PERFIL_MAIOR = np.array([7.24, 3.50, 3.58, 2.85, 5.82, 4.56, 2.45, 6.99, 3.39, 4.56, 4.07, 4.46])
+PERFIL_MENOR = np.array([7.00, 3.14, 4.36, 5.40, 3.67, 4.09, 3.91, 6.20, 3.63, 2.87, 5.35, 3.83])
 
 
 def decodificar(caminho, inicio: float, duracao: float) -> np.ndarray:
@@ -76,7 +78,7 @@ def _bpm(f: Faixa, x: np.ndarray, sr: int, genero_dica: str = "") -> None:
 
 # ---------------------------------------------------------------- Tom
 def _tom(f: Faixa, x: np.ndarray, sr: int) -> None:
-    n_fft, hop = 8192, 4096
+    n_fft, hop = 16384, 4096   # ~2,7 Hz de resolução: separa bem as notas graves
     mag = _stft_mag(x, n_fft, hop)
     freqs = np.fft.rfftfreq(n_fft, 1 / sr)
     sel = (freqs >= 100) & (freqs <= 2000)  # abaixo de 100 Hz é sub-bass, que atrapalha o tom
@@ -93,18 +95,19 @@ def _tom(f: Faixa, x: np.ndarray, sr: int) -> None:
 
     comp = np.sqrt(m) * peso
     chroma = np.stack([comp[:, pcs == pc].sum(1) for pc in range(12)], axis=1)
-    total = chroma.sum(1, keepdims=True)
-    ok = total[:, 0] > np.percentile(total, 20)
-    c = (chroma[ok] / total[ok]).mean(0)
+    total = chroma.sum(1, keepdims=True) + 1e-9
+    c = (chroma / total).mean(0)   # todos os quadros contam (descartar os fracos piorou o acerto nos testes)
 
+    # semelhança de cosseno (e não correlação): também nos testes contra o djay acertou bem mais
+    cos = lambda p: float(c @ p / (np.linalg.norm(c) * np.linalg.norm(p) + 1e-12))  # noqa: E731
     notas = []
     for t in range(12):
-        notas.append((np.corrcoef(c, np.roll(PERFIL_MAIOR, t))[0, 1], t, False))
-        notas.append((np.corrcoef(c, np.roll(PERFIL_MENOR, t))[0, 1], t, True))
+        notas.append((cos(np.roll(PERFIL_MAIOR, t)), t, False))
+        notas.append((cos(np.roll(PERFIL_MENOR, t)), t, True))
     notas.sort(reverse=True)
     (c1, pc, menor), (c2, _, _) = notas[0], notas[1]
     f.tom_pc, f.tom_menor = int(pc), bool(menor)
-    f.tom_conf = round(float(c1 - c2), 3)
+    f.tom_conf = round(float(c1 - c2) * 10, 3)   # margem entre o 1º e o 2º tom (x10 para ficar na mesma escala de antes)
     f.camelot = camelot(pc, menor)
 
 

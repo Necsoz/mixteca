@@ -705,8 +705,40 @@ def _versao_online(cred: dict) -> int:
             + (4 if cred.get("lastfm") else 0) + (8 if cred.get("acoustid") else 0) + (16 if cred.get("procurar_capa_melhor", True) else 0))
 
 
+def _migrar_coletaneas() -> int:
+    """Uma vez só: versões anteriores podiam tirar capa, álbum e ano de COLETÂNEAS (ex.: "Hits Été 2016"). Esses valores
+    automáticos saem, e a busca nova (que ignora coletâneas) completa de novo o que achar. Devolve quantas músicas mudaram."""
+    marca = Path(E.pasta_config) / "migracao-coletaneas.ok"
+    if marca.exists():
+        return 0
+    sobre, por_caminho, n = E.cache.sobrescritas(), {f.caminho: f for f in E.faixas}, 0
+    for caminho, ov in list(sobre.items()):
+        tirar = [k for k, c in (ov.get("campos") or {}).items()
+                 if k in ("capa", "album", "ano") and c.get("fonte") not in ("você", "manual")]
+        if not tirar:
+            continue
+        f = por_caminho.get(caminho)
+        for k in tirar:
+            c = ov["campos"].pop(k)
+            if f is not None and k != "capa":
+                setattr(f, k, c.get("anterior", ""))
+        E.cache.sobrescrita_salvar(caminho, ov if ov["campos"] else None)
+        if not ov["campos"]:
+            sobre.pop(caminho, None)
+        if f is not None:
+            ajustes.aplicar_em_faixa(f, ov)
+        n += 1
+    try:
+        marca.write_text("ok", encoding="utf-8")
+    except OSError:
+        pass
+    return n
+
+
 def _identificar_tudo(progresso, internet: bool = True, escopo: str = "faltando", rotulo: str = "") -> dict | None:
     """Busca na internet (ou só pela sonoridade) o que falta, aplica o que é seguro e guarda o resto como sugestão."""
+    if internet and E.faixas:
+        _migrar_coletaneas()
     cred = config.carregar_credenciais(E.pasta_config)
     base, so_capa = _alvos_identificacao(escopo, cred["procurar_capa_melhor"] and internet, progresso)
     alvos = base + so_capa

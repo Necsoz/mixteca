@@ -783,6 +783,40 @@ def test_repetidas_na_tela_escolha_e_copia():
         servidor.ler_info = original
 
 
+def test_capa_album_e_ano_nunca_de_coletanea():
+    from organizador.provedores import musicbrainz as mb
+    single = {"id": "s1", "title": "Freak", "date": "2016-03-01", "status": "Official", "release-group": {"id": "g1", "primary-type": "Single"}}
+    hits = {"id": "c1", "title": "Hits Été 2016", "date": "2016-06-01", "status": "Official",
+            "release-group": {"id": "g2", "primary-type": "Album", "secondary-types": ["Compilation"]}}
+    varios = {"id": "c2", "title": "Bravo Hits 93", "date": "2016-05-01", "status": "Official", "release-group": {"id": "g3", "primary-type": "Album"},
+              "artist-credit": [{"name": "Various Artists", "artist": {"id": mb.VARIOS_ARTISTAS}}]}
+    assert mb.coletanea(hits) and mb.coletanea(varios) and not mb.coletanea(single)
+    assert mb.escolher_lancamento([hits, varios, single]) == (single, True)
+    assert mb.escolher_lancamento([hits, varios], "Hits Été 2016")[1] is False      # nem a tag do álbum faz valer a coletânea
+    g = {"id": "r1", "title": "Freak", "artist-credit": [{"name": "R3HAB"}], "releases": [hits, varios]}
+    c = mb.candidato_de_gravacao(g)
+    assert c["sem_lancamento"] and c["album"] == "" and c["ano"] == "" and c["release_id"] == "" and c["release_group_id"] == ""
+
+
+def test_migracao_tira_capa_album_e_ano_automaticos():
+    tmp = _tmp()
+    servidor.criar_servidor(0, tmp / "c.db", tmp)
+    E = servidor.E
+    from organizador import ajustes
+    from organizador.modelos import Faixa
+    f = Faixa(caminho="/x/freak.mp3", titulo="Freak", artista="R3HAB", album="")
+    g = Faixa(caminho="/x/outra.mp3", titulo="Outra", artista="A", album="")
+    E.faixas = [f, g]
+    sobre = E.cache.sobrescritas()
+    ajustes.registrar(E.cache, sobre, f, {"album": {"novo": "Hits Été 2016", "fonte": "MusicBrainz", "nivel": "alta"},
+                                          "capa": {"novo": "/capas/hits.jpg", "fonte": "Cover Art Archive", "nivel": "alta"},
+                                          "genero": {"novo": "Big Room", "fonte": "MusicBrainz", "nivel": "alta"}})
+    ajustes.registrar(E.cache, sobre, g, {"album": {"novo": "Meu Álbum", "fonte": "você", "nivel": "alta"}})
+    assert servidor._migrar_coletaneas() == 1 and servidor._migrar_coletaneas() == 0     # só uma vez
+    assert f.album == "" and "capa_arquivo" not in f.ajustes and f.genero == "Big Room"   # gênero fica
+    assert g.album == "Meu Álbum"                                                          # o que você escolheu fica
+
+
 if __name__ == "__main__":
     falhas = 0
     for nome, fn in sorted(globals().items()):

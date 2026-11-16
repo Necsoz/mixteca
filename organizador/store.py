@@ -6,7 +6,7 @@ import time
 
 from .modelos import Faixa
 
-VERSAO = 3  # aumente quando o algoritmo de análise mudar, para refazer as análises antigas
+VERSAO = 4  # aumente quando o algoritmo de análise mudar, para refazer as análises antigas
 
 
 class Cache:

@@ -4,6 +4,7 @@ Regras de segurança: só COPIA (nunca move nem apaga), confere o tamanho depois
 nunca sobrescreve um arquivo diferente e grava um log de tudo que fez.
 """
 import json
+import os
 import re
 import shutil
 import time
@@ -433,6 +434,12 @@ def executar(plano: list[ItemPlano], destino, ao_progresso=None, cancelar=None, 
                 # a cópia desta música já está no lugar certo: não copia de novo; só atualiza as tags se algo mudou
                 reg = {"origem": str(origem), "destino": str(alvo), "status": "ja_existia"}
                 if "tags" in ant and (ant.get("tags") != item.tags or ant.get("capa") != item.capa):
+                    if ant.get("capa") and not item.capa:
+                        # a capa que o programa tinha colocado saiu (ex.: era de uma coletânea): copia de novo do
+                        # original, que nunca teve essa capa, e grava as tags por cima
+                        tmp = alvo.with_name(f".tmp-{alvo.name}")
+                        shutil.copy2(origem, tmp)
+                        os.replace(tmp, alvo)
                     gravar(alvo, item, reg)
                     atualizados += 1
                 ignorados += 1

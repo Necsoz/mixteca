@@ -6,7 +6,7 @@ from .provedores import acoustid, capas, discogs, lastfm, musicbrainz
 from .rede import ErroRede  # noqa: F401  (reexportado para quem chama)
 from .taxonomia import Taxonomia
 
-VERSAO_ONLINE = 3  # sobe quando a lógica de busca muda: resultados antigos são pesquisados de novo
+VERSAO_ONLINE = 4  # sobe quando a lógica de busca muda: resultados antigos são pesquisados de novo
 CAMPOS_ROTULO = {"titulo": "Nome", "artista": "Artista", "album": "Álbum/Single", "ano": "Ano", "genero": "Gênero", "capa": "Capa"}
 
 
@@ -65,6 +65,13 @@ def pesquisar_online(faixa, cli, cred: dict, pasta_capas, so_capa: bool = False)
     if melhor is None:
         return {"cand": None, "consulta": {"artista": art, "titulo": tit, "origem": origem}}
 
+    if melhor.get("sem_lancamento") and melhor.get("mbid") and melhor["_nota"]["nivel"] in ("alta", "media"):
+        # a busca só trouxe coletâneas: a gravação completa lista todos os lançamentos (single, EP, álbum do artista)
+        completo = musicbrainz.por_id(cli, melhor["mbid"], faixa.album)
+        if completo and not completo.get("sem_lancamento"):
+            for k in ("album", "tipo", "ano", "release_id", "release_group_id"):
+                melhor[k] = completo[k]
+    melhor.pop("sem_lancamento", None)
     nota = melhor.pop("_nota")
     brutos = {"MusicBrainz": melhor.pop("tags_gravacao", {})}
     capa = None

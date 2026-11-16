@@ -420,6 +420,22 @@ def test_repetidas_de_outra_pasta():
     assert repetidas.existentes(dest, dest / "Melhoradas") and not any("Substitu" in (e["copia"] or "") for e in repetidas.existentes(dest, dest / "Melhoradas"))
 
 
+def test_capa_colocada_pelo_programa_sai_da_copia_quando_o_ajuste_sai():
+    import subprocess
+    tmp = Path(tempfile.mkdtemp()); o = tmp / "o"; o.mkdir(); d = tmp / "d"
+    subprocess.run(["ffmpeg", "-v", "error", "-f", "lavfi", "-i", "sine=d=3", "-b:a", "128k", str(o / "a.mp3")], check=True)
+    subprocess.run(["ffmpeg", "-v", "error", "-f", "lavfi", "-i", "color=red:s=600x600", "-frames:v", "1", str(tmp / "c.jpg")], check=True)
+    f = Faixa(caminho=str(o / "a.mp3"), titulo="T", artista="A", genero="G", bpm=128, bpm_conf=9, camelot="8A", tom_conf=.1)
+    f.ajustes = {"capa_arquivo": str(tmp / "c.jpg")}
+    planejador.executar(planejador.planejar([f], "A", ordem=["genero"]), d)
+    copia = next(d.rglob("*.mp3"))
+    tem_capa = lambda p: "video" in subprocess.run(["ffprobe", "-v", "error", "-show_entries", "stream=codec_type", "-of", "csv", str(p)], capture_output=True, text=True).stdout  # noqa: E731
+    assert tem_capa(copia)
+    f.ajustes = {}      # a capa era de uma coletânea e saiu
+    r = planejador.executar(planejador.planejar([f], "A", ordem=["genero"]), d)
+    assert not tem_capa(copia) and r["atualizados"] == 1
+
+
 if __name__ == "__main__":
     falhas = 0
     for nome, fn in sorted(globals().items()):

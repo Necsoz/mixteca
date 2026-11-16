@@ -436,6 +436,24 @@ def test_capa_colocada_pelo_programa_sai_da_copia_quando_o_ajuste_sai():
     assert not tem_capa(copia) and r["atualizados"] == 1
 
 
+def test_refazer_nao_deixa_versao_antiga_para_tras_e_sobras_saem():
+    tmp = Path(tempfile.mkdtemp())
+    o, saida = tmp / "o", tmp / "Melhoradas"
+    o.mkdir()
+    (o / "a.mp3").write_bytes(b"a" * 50)
+    (saida / "Big Room").mkdir(parents=True)
+    (saida / "Big Room/128 - 08A - Art - A.mp3").write_bytes(b"velha")
+    planejador.salvar_indice(saida, {str(o / "a.mp3"): {"rel": "Big Room/128 - 08A - Art - A.mp3", "marca": "m"}})
+    fz, _, ind = planejador.reaproveitar(saida, [(str(o / "a.mp3"), "Big Room/Art - A.mp3")], "m", refazer=True)
+    assert fz == [0] and (saida / "Big Room/Art - A.mp3").is_file() and not (saida / "Big Room/128 - 08A - Art - A.mp3").exists()
+    ind[str(o / "a.mp3")]["rel"] = "Big Room/Art - A.mp3"   # o que o melhorar grava depois de refazer
+    # sobra de uma rodada antiga (nome com BPM e tom) ao lado da versão atual: vai para Substituídas
+    (saida / "Big Room/130 - 01A - Art - A.mp3").write_bytes(b"sobra")
+    (saida / "Big Room/Outra Coisa.mp3").write_bytes(b"do usuario")
+    assert planejador.guardar_sobras(saida, ind) == 1
+    assert (saida / "Substituídas/Big Room/130 - 01A - Art - A.mp3").is_file() and (saida / "Big Room/Outra Coisa.mp3").is_file()
+
+
 if __name__ == "__main__":
     falhas = 0
     for nome, fn in sorted(globals().items()):

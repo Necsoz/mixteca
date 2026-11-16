@@ -301,9 +301,9 @@ def reaproveitar(saida, pedidos: list[tuple[str, str]], marca=None, refazer: boo
     Devolve (posições dos pedidos que precisam ser feitos, contagens, índice atualizado). Nunca apaga arquivos."""
     so_arrumar = set(so_arrumar)
     saida = Path(saida)
-    antigo = _carregar_indice(saida)
-    # refazer: recomeça o índice, mas guarda o registro do que só vai ser arrumado
-    indice = {p[0]: antigo[p[0]] for n, p in enumerate(pedidos) if n in so_arrumar and p[0] in antigo} if refazer else antigo
+    # refazer: tudo é feito de novo, mas a versão anterior primeiro vai para o lugar novo (e é gravada por cima),
+    # senão ficaria esquecida na pasta com o nome antigo
+    indice = _carregar_indice(saida)
     cont = {"no_lugar": 0, "movidos": 0, "ja_bom": 0}
     por_nome: dict[str, list[Path]] | None = None
     usados: set[Path] = set()
@@ -312,9 +312,6 @@ def reaproveitar(saida, pedidos: list[tuple[str, str]], marca=None, refazer: boo
     for n, pedido in enumerate(pedidos):
         origem, rel = pedido[0], pedido[1]
         outros_nomes = list(pedido[2]) if len(pedido) > 2 else []  # nomes que o arquivo pode ter tido antes (ex.: sem o tom na frente)
-        if refazer and n not in so_arrumar:
-            fazer.append(n)
-            continue
         novo = saida / rel
         try:
             sig = _assinatura(Path(origem))
@@ -323,7 +320,7 @@ def reaproveitar(saida, pedidos: list[tuple[str, str]], marca=None, refazer: boo
             continue
         ant = indice.get(origem)
         # feita com outro volume alvo ou por um jeito antigo de melhorar: o arquivo acompanha a pasta nova, mas é refeito
-        desatualizada = marca is not None and n not in so_arrumar and (not ant or ant.get("marca") != marca)
+        desatualizada = n not in so_arrumar and (refazer or (marca is not None and (not ant or ant.get("marca") != marca)))
         if ant:
             mesma = n in so_arrumar or (ant.get("tam") in (None, sig[0]) and ant.get("mtime") in (None, sig[1]))
             if mesma and ant.get("ja_bom") and not desatualizada:
@@ -364,6 +361,37 @@ def reaproveitar(saida, pedidos: list[tuple[str, str]], marca=None, refazer: boo
     if moveu:
         _apagar_pastas_vazias(saida)
     return [n for n in fazer if n not in so_arrumar], cont, indice
+
+
+_PREFIXO_NOME = re.compile(r"^(?:\d{3} - )?(?:\d{2}[AB] - )?")
+
+
+def guardar_sobras(saida, indice: dict, pasta_substituidas: str = "Substituídas") -> int:
+    """Versões antigas esquecidas numa pasta de resultados: arquivo que o índice não conhece, mas que é a mesma música
+    de um arquivo conhecido na mesma pasta de gênero, só com outro nome (ex.: "128 - 08A - Artista - Título" ao lado de
+    "Artista - Título"). Vão para a pasta Substituídas (nada é apagado). Devolve quantas saíram."""
+    saida = Path(saida)
+    pular = {".organizador", "Substituídas", "Replaced"}
+    conhecidos = {Path(d["rel"]).as_posix().casefold() for d in indice.values() if d.get("rel")}
+    por_nome = {}
+    for rel in conhecidos:
+        r = Path(rel)
+        por_nome[(r.parts[0] if len(r.parts) > 1 else "", _PREFIXO_NOME.sub("", r.stem), r.suffix)] = rel
+    n = 0
+    for arq in sorted(saida.rglob("*")) if saida.is_dir() else []:
+        rel = arq.relative_to(saida)
+        if not arq.is_file() or pular & set(rel.parts) or rel.as_posix().casefold() in conhecidos:
+            continue
+        chave = (rel.parts[0].casefold() if len(rel.parts) > 1 else "", _PREFIXO_NOME.sub("", arq.stem).casefold(), arq.suffix.casefold())
+        if chave in por_nome:
+            alvo = saida / pasta_substituidas / rel
+            alvo.parent.mkdir(parents=True, exist_ok=True)
+            if not alvo.exists():
+                shutil.move(str(arq), str(alvo))
+                n += 1
+    if n:
+        _apagar_pastas_vazias(saida)
+    return n
 
 
 def salvar_indice(saida, indice: dict) -> None:

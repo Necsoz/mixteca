@@ -200,6 +200,7 @@ TELA_EN: list[tuple[str, str]] = [
     ('repetidas puladas (ficou a do destino), ', 'duplicates skipped (destination one kept), '),
     ('trocadas pelas novas (antigas em Substituídas), ', 'replaced with the new ones (old ones in Replaced), '),
     ('"O Mixteca parou de responder. O trabalho feito até aqui fica salvo: abra o programa de novo e repita o passo, que ele continua de onde parou."', '"Mixteca stopped responding. The work done so far is saved: open the program again and repeat the step, and it picks up where it left off."'),
+    ('versões antigas guardadas em Substituídas, ', 'old versions moved to Replaced, '),
     ('<button id="b-pausar">Pausar</button><button id="b-cancelar">Cancelar</button>', '<button id="b-pausar">Pause</button><button id="b-cancelar">Cancel</button>'),
     # ---- textos montados pelo script
     ('nomesNiveis={genero:"Gênero",bpm:"BPM",camelot:"Tom (Camelot)",artista:"Artista",ano:"Ano"}',

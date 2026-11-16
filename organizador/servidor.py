@@ -468,6 +468,8 @@ def r_melhorar(c):
                     cont["mensagens"].append(f"{Path(it.origem).name}: {str(e)[-160:]}")
             progresso(feitos, total, Path(it.origem).name)
         planejador.salvar_indice(saida, indice)
+        if not E.cancelar.is_set():   # versões antigas que ficaram para trás com outro nome saem do caminho
+            cont["sobras"] = planejador.guardar_sobras(saida, indice, planejador.nome_pasta("Substituídas", _idioma()))
         return cont
 
     E.iniciar("melhorar", trabalho)

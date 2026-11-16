@@ -309,10 +309,11 @@ async function escolher(campo,titulo){
 const params=()=>({padrao,ordem:niveis,tom_no_nome:$("#tom_nome").checked,bpm_no_nome:$("#bpm_nome").checked,bpm_modo:$("#bpm_modo").value,bpm_tam:+$("#bpm_tam").value,incluir_incertas:$("#incertas").checked,agrupar_generos:$("#agrupar").checked,destino:$("#destino").value,gravar_tags:$("#gravar_tags").checked});
 
 /* ---------- tarefas em segundo plano ---------- */
-function acompanhar(){clearInterval(timer);timer=setInterval(checar,700);checar()}
+let falhasSeguidas=0;
+function acompanhar(){clearInterval(timer);falhasSeguidas=0;timer=setInterval(checar,700);checar()}
 async function checar(){
   try{
-    const {job}=await api("/api/estado"); const b=$("#barra");
+    const {job}=await api("/api/estado"); const b=$("#barra"); falhasSeguidas=0;
     if(job.fase==="rodando"){
       b.style.display="block"; ultimoTipo=job.tipo;
       const p=job.total?Math.round(100*job.feitos/job.total):0; $("#bi").style.width=p+"%";
@@ -324,7 +325,11 @@ async function checar(){
     if(job.fase==="erro") return erro(job.erro);
     if(job.fase==="cancelado") return erro("Cancelado.");
     if(job.fase==="concluido") await terminou(job);
-  }catch(e){clearInterval(timer);erro(e.message)}
+  }catch(e){
+    /* o computador ocupado pode atrasar uma resposta: a tarefa continua; só avisa se o programa parar de responder de vez */
+    if(++falhasSeguidas<40) return;
+    clearInterval(timer); erro("O Mixteca parou de responder. O trabalho feito até aqui fica salvo: abra o programa de novo e repita o passo, que ele continua de onde parou.");
+  }
 }
 async function terminou(job){
   const r=job.resultado||{};

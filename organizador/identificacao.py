@@ -6,7 +6,7 @@ from .provedores import acoustid, capas, discogs, lastfm, musicbrainz
 from .rede import ErroRede  # noqa: F401  (reexportado para quem chama)
 from .taxonomia import Taxonomia
 
-VERSAO_ONLINE = 5  # sobe quando a lógica de busca muda: resultados antigos são pesquisados de novo
+VERSAO_ONLINE = 6  # sobe quando a lógica de busca muda: resultados antigos são pesquisados de novo
 CAMPOS_ROTULO = {"titulo": "Nome", "artista": "Artista", "album": "Álbum/Single", "ano": "Ano", "genero": "Gênero", "capa": "Capa"}
 
 
@@ -17,7 +17,10 @@ def pesquisar_online(faixa, cli, cred: dict, pasta_capas, so_capa: bool = False)
     melhor = None
     # título só para PESQUISAR: sem trechos estranhos entre parênteses (ex.: nome de site), que fariam a busca falhar
     tit_busca = limpeza.sem_grupos_estranhos(tit) or tit
-    for t in ([tit] + ([tit_busca] if tit_busca != tit else [])) if tit else []:
+    tentativas = [tit] + ([tit_busca] if tit_busca != tit else [])
+    if " - " in tit_busca:   # "Música - algo a mais" (selo, canal, versão): tenta também só a primeira parte
+        tentativas.append(tit_busca.split(" - ")[0].strip())
+    for t in tentativas if tit else []:
         if melhor is not None and melhor["_nota"]["nivel"] != "baixa":
             break
         for c in musicbrainz.buscar(cli, art, t, faixa.album):

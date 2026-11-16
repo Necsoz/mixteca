@@ -85,10 +85,24 @@ def limpar_texto(texto: str) -> str:
     return t
 
 
+_DO_YOUTUBE = re.compile(r"[\(\[]\s*youtube\s*[\)\]]", re.I)
+
+
+def sem_canal(texto: str, original: str) -> str:
+    """Arquivo baixado do YouTube: o título do vídeo costuma terminar com o nome do canal ("Artista - Música - Canal").
+    Tira o que vem depois de "Artista - Música", a não ser que seja versão (Extended Mix, Radio Edit...)."""
+    if not _DO_YOUTUBE.search(original or ""):
+        return texto
+    partes = re.split(r"\s+[-–]\s+", texto)
+    if len(partes) < 3:
+        return texto
+    return " - ".join(partes[:2] + [p for p in partes[2:] if PROTEGE.search(p)])
+
+
 def limpar_stem(stem: str) -> str:
     """Limpa o nome de um arquivo (sem extensão): números de faixa, underscores e lixo de site."""
     s = _NUMERO_INICIAL.sub("", (stem or "").replace("_", " "))
-    s = limpar_texto(s)
+    s = sem_canal(limpar_texto(s), stem)
     return s or (stem or "").strip()
 
 

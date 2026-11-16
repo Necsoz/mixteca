@@ -456,6 +456,15 @@ def test_refazer_nao_deixa_versao_antiga_para_tras_e_sobras_saem():
     assert (saida / "Big Room/Art - A.mp3").is_file()
 
 
+def test_nome_do_canal_do_youtube_sai_do_nome():
+    from organizador import limpeza, casamento
+    assert limpeza.limpar_stem("Deorro x MAKJ - Ante Up (Original Mix) - WorldMusic Premiere (youtube)") == "Deorro x MAKJ - Ante Up (Original Mix)"
+    assert limpeza.limpar_stem("Dimitri Vegas & Like Mike - Bringing Home The Madness [FREE DOWNLOAD] - U-T Rec (youtube)") == "Dimitri Vegas & Like Mike - Bringing Home The Madness"
+    assert limpeza.limpar_stem("Artista - Musica - Extended Mix (youtube)") == "Artista - Musica - Extended Mix"   # versão fica
+    assert limpeza.limpar_stem("Hardwell - Everybody - Extended Mix") == "Hardwell - Everybody - Extended Mix"   # não é do YouTube: nada muda
+    assert casamento.consulta_do_arquivo("", "", "/x/Ibranovski - Vicious (Original Mix) - Spinnin' Records (youtube).mp3")[:2] == ("Ibranovski", "Vicious (Original Mix)")
+
+
 if __name__ == "__main__":
     falhas = 0
     for nome, fn in sorted(globals().items()):

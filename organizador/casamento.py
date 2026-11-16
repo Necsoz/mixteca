@@ -49,6 +49,7 @@ def consulta_do_arquivo(titulo: str, artista: str, caminho: str) -> tuple[str, s
     if titulo and artista:
         return artista, titulo, "tags"
     nome = re.sub(r"^\s*\d{1,3}\s*[-._)]\s*", "", Path(caminho).stem).replace("_", " ").strip()
+    nome = limpeza.sem_canal(nome, Path(caminho).stem)   # "Artista - Música - Canal (youtube)": o canal não é do nome
     partes = [p.strip() for p in re.split(r"\s+-\s+", nome, maxsplit=1)]
     if len(partes) == 2 and all(partes):
         return artista or partes[0], titulo or partes[1], "arquivo" if not (titulo or artista) else "tags+arquivo"

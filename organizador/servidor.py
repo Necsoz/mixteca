@@ -403,6 +403,10 @@ def r_melhorar(c):
                 rep = mapa.get(i.origem)
                 if rep and rep["escolha"] == "destino":
                     cont["repetidas_na_origem" if rep.get("na_origem") else "repetidas_mantidas"] += n not in fora
+                    # esta versão não fica: se ela já tinha sido melhorada antes, a melhorada sai do caminho
+                    velha = indice_m.pop(i.origem, None)
+                    if velha and velha.get("rel") and repetidas.guardar_substituida(saida / velha["rel"], saida, planejador.nome_pasta("Substituídas", _idioma())):
+                        cont["substituidas"] += 1
                     continue
                 if rep and rep["escolha"] == "nova" and n not in fora and rep.get("melhorada"):
                     if repetidas.guardar_substituida(rep["melhorada"], saida, planejador.nome_pasta("Substituídas", _idioma())):

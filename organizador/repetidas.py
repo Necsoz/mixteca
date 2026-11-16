@@ -32,9 +32,14 @@ def versao(titulo: str) -> str:
     return (m.group(1) or m.group(2) or "").strip().title() if m else ""
 
 
+_FEAT = re.compile(r"[\(\[]\s*(?:feat|ft|featuring)\b[^\)\]]*[\)\]]", re.I)
+
+
 def _chave_titulo(titulo: str) -> str:
-    """Título comparável: sem "(Original Mix)" e afins, mas mantendo remix/bootleg/VIP (são outras músicas)."""
-    return casamento.norm(_VERSAO_PADRAO.sub(" ", titulo or ""), tirar_versao=False)
+    """Título comparável: sem "(Original Mix)", "(feat. ...)" e afins, mas mantendo remix/bootleg/VIP (são outras músicas)."""
+    t = (titulo or "").replace("’", "'").replace("‘", "'")
+    t = _FEAT.sub(" ", _VERSAO_PADRAO.sub(" ", t))
+    return casamento.norm(t, tirar_versao=False)
 
 
 def _do_nome(arquivo: Path) -> tuple[str, str]:

@@ -433,6 +433,9 @@ def executar(plano: list[ItemPlano], destino, ao_progresso=None, cancelar=None, 
                     na_origem += 1
                 else:
                     mantidas += 1
+                velha = indice.pop(str(origem), None)   # esta versão não fica: se já tinha sido copiada antes, a cópia sai do caminho
+                if velha and velha.get("rel") and guardar_substituida(destino / velha["rel"], destino, pasta_substituidas):
+                    substituidas += 1
                 registro.append({"origem": str(origem), "destino": rep.get("copia") or "", "status": "repetida_mantida"})
                 if ao_progresso:
                     ao_progresso(i, len(plano))

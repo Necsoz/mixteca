@@ -817,6 +817,36 @@ def test_migracao_tira_capa_album_e_ano_automaticos():
     assert g.album == "Meu Álbum"                                                          # o que você escolheu fica
 
 
+def test_melhorar_tenta_de_novo_o_que_falhou_por_falta_de_memoria():
+    import time as _t
+    from organizador.modelos import Faixa
+    tmp = _tmp()
+    servidor.criar_servidor(0, tmp / "c.db", tmp)
+    E = servidor.E
+    o = tmp / "o"; o.mkdir()
+    for n in ("a", "b", "c"):
+        (o / f"{n}.mp3").write_bytes(n.encode() * 100)
+    E.faixas, E.origem = [Faixa(caminho=str(o / f"{n}.mp3"), titulo=n, artista="X", genero="G") for n in "abc"], str(o)
+    vezes = {}
+    def falso(origem, destino_arq, alvo):
+        vezes[origem] = vezes.get(origem, 0) + 1
+        if origem.endswith("b.mp3") and vezes[origem] == 1:
+            raise RuntimeError("Cannot allocate memory")
+        if origem.endswith("c.mp3"):
+            raise RuntimeError("arquivo estragado")
+        Path(destino_arq).parent.mkdir(parents=True, exist_ok=True); Path(destino_arq).write_bytes(b"ok")
+        return {"status": "melhorado", "destino": str(destino_arq)}
+    servidor.melhorar, orig = falso, servidor.melhorar
+    try:
+        servidor.r_melhorar({"destino": str(tmp / "d"), "ordem": ["genero"], "escopo": "todas", "gravar_tags": False})
+        while E.job["fase"] == "rodando":
+            _t.sleep(0.05)
+    finally:
+        servidor.melhorar = orig
+    r = E.job["resultado"]
+    assert r["melhoradas"] == 2 and r["erros"] == 1 and "estragado" in r["mensagens"][0], r
+
+
 if __name__ == "__main__":
     falhas = 0
     for nome, fn in sorted(globals().items()):

@@ -429,29 +429,44 @@ def r_melhorar(c):
             except OSError:
                 pass
 
+        def concluir(n, r):
+            it = itens[n]
+            cont["melhoradas" if r["status"] == "melhorado" else "ja_bom"] += 1
+            if r["status"] == "melhorado":
+                marcar(it, rels[n])
+                if (it.tags or it.capa) and c.get("gravar_tags", True):
+                    gravar_tags_copia(r["destino"], it.tags or {}, it.capa)
+            else:
+                marcar(it, ja_bom=True)
+
+        tentar_de_novo = []
         with ThreadPoolExecutor(max_workers=3) as pool:
             futuros = {}
             for n in fazer:
                 i = itens[n]
                 futuros[pool.submit(lambda it=i: None if E.cancelar.is_set() else melhorar(it.origem, saida / it.destino, alvo))] = n
             for fut in as_completed(futuros):
-                feitos += 1
-                it = itens[futuros[fut]]
+                n = futuros[fut]
                 try:
                     r = fut.result()
                     if r is not None:
-                        cont["melhoradas" if r["status"] == "melhorado" else "ja_bom"] += 1
-                        if r["status"] == "melhorado":
-                            marcar(it, rels[futuros[fut]])
-                            if (it.tags or it.capa) and c.get("gravar_tags", True):
-                                gravar_tags_copia(r["destino"], it.tags or {}, it.capa)
-                        else:
-                            marcar(it, ja_bom=True)
-                except Exception as e:  # noqa: BLE001
-                    cont["erros"] += 1
-                    if len(cont["mensagens"]) < 5:
-                        cont["mensagens"].append(f"{Path(it.origem).name}: {e}")
-                progresso(feitos, total, Path(it.origem).name)
+                        concluir(n, r)
+                except Exception:  # noqa: BLE001 - ex.: falta de memória com 3 ao mesmo tempo: tenta de novo, sozinha, no fim
+                    tentar_de_novo.append(n)
+                    continue
+                feitos += 1
+                progresso(feitos, total, Path(itens[n].origem).name)
+        for n in tentar_de_novo:   # uma por vez, com o computador mais livre
+            it = itens[n]
+            feitos += 1
+            try:
+                if not E.cancelar.is_set():
+                    concluir(n, melhorar(it.origem, saida / it.destino, alvo))
+            except Exception as e:  # noqa: BLE001
+                cont["erros"] += 1
+                if len(cont["mensagens"]) < 5:
+                    cont["mensagens"].append(f"{Path(it.origem).name}: {str(e)[-160:]}")
+            progresso(feitos, total, Path(it.origem).name)
         planejador.salvar_indice(saida, indice)
         return cont
 

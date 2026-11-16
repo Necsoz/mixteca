@@ -74,6 +74,8 @@ Se você escolher **outra pasta de origem** e o mesmo destino, o Mixteca compara
 
 Duas músicas contam como a mesma quando artista e título batem e a duração é quase igual. Versões diferentes, como Extended e Radio Edit ou original e remix, não são consideradas repetidas. Nada é apagado: quando a nova entra no lugar, a antiga vai para a pasta `Substituídas` dentro do destino. As músicas que não se repetem são organizadas normalmente.
 
+O mesmo vale para músicas que aparecem **mais de uma vez na própria pasta das músicas** (por exemplo, `Música.mp3` e `Música (1).mp3`): elas aparecem na mesma lista, o programa sugere ficar só com a de melhor qualidade e a outra deixa de ser copiada (o original continua na pasta, intacto).
+
 ### Organizar de novo no mesmo destino
 Se você adicionar músicas ou mudar as opções e organizar outra vez no mesmo destino, o Mixteca não duplica nada: as cópias que mudaram de pasta são **movidas**, as que já estão no lugar são puladas e só as novas são copiadas. O mesmo vale para a pasta `Melhoradas`: tudo o que já foi melhorado antes acompanha a organização nova, mesmo as músicas que ficaram fora da escolha desta vez (por exemplo, "só as de qualidade baixa").
 
@@ -132,7 +134,7 @@ python tests/e2e_identificacao_ui.py PASTA_PRINTS   # fluxo na tela (precisa do 
 
 O pacote do Windows é gerado por `.github/workflows/build-windows.yml` (PyInstaller + Inno Setup). As licenças das peças de terceiros estão em `LICENCAS.md`.
 
-Estrutura: `organizador/analise.py` (BPM, tom, qualidade) · `identificacao.py`, `decisao.py`, `casamento.py`, `classificador.py`, `provedores/` (busca e decisão de metadados) · `planejador.py` (pastas e cópia segura) · `repetidas.py` (músicas repetidas entre pastas) · `escrita.py` (tags nas cópias) · `melhoria.py` (áudio) · `servidor.py` + `web/index.html` (interface).
+Estrutura: `organizador/analise.py` (BPM, tom, qualidade) · `identificacao.py`, `decisao.py`, `casamento.py`, `classificador.py`, `provedores/` (busca e decisão de metadados) · `planejador.py` (pastas e cópia segura) · `repetidas.py` (músicas repetidas) · `escrita.py` (tags nas cópias) · `melhoria.py` (áudio) · `servidor.py` + `web/index.html` (interface).
 
 ## Licença
 

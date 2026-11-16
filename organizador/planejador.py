@@ -375,7 +375,7 @@ def executar(plano: list[ItemPlano], destino, ao_progresso=None, cancelar=None, 
     destino = Path(destino)
     repetidas = repetidas or {}
     copiados = ignorados = erros = gravadas = falhas_tags = capas_trocadas = originais_alterados = movidos = atualizados = 0
-    mantidas = substituidas = 0
+    mantidas = substituidas = na_origem = 0
     registro, revisao, detalhes_erro = [], [], []
     indice = _carregar_indice(destino)
 
@@ -399,8 +399,11 @@ def executar(plano: list[ItemPlano], destino, ao_progresso=None, cancelar=None, 
         alvo = destino / item.destino
         rep = repetidas.get(item.origem)
         try:
-            if rep and rep.get("escolha") == "destino":   # repetida: fica a que já estava no destino
-                mantidas += 1
+            if rep and rep.get("escolha") == "destino":   # repetida: fica a que já estava no destino (ou a outra versão da pasta)
+                if rep.get("na_origem"):
+                    na_origem += 1
+                else:
+                    mantidas += 1
                 registro.append({"origem": str(origem), "destino": rep.get("copia") or "", "status": "repetida_mantida"})
                 if ao_progresso:
                     ao_progresso(i, len(plano))
@@ -484,4 +487,4 @@ def executar(plano: list[ItemPlano], destino, ao_progresso=None, cancelar=None, 
             "revisao": revisao[:300], "revisao_total": len(revisao), "erros_detalhe": detalhes_erro[:50],
             "primeiro_nivel": [{"nome": k, "qtd": v} for k, v in sorted(primeiro.items(), key=lambda kv: (kv[0] in PASTAS_REVISAO, kv[0].casefold()))],
             "cancelado": bool(cancelar is not None and cancelar.is_set()),
-            "repetidas_mantidas": mantidas, "substituidas": substituidas}
+            "repetidas_mantidas": mantidas, "repetidas_na_origem": na_origem, "substituidas": substituidas}

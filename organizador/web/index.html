@@ -194,10 +194,10 @@ select:disabled{opacity:.45;cursor:not-allowed}
 </section>
 
 <section id="srep" class="off fora" data-p="2">
-  <h2>Músicas repetidas <small style="color:var(--mut);font-weight:400">(<span id="rep-n">0</span> que já estão no destino)</small></h2>
-  <p class="hint">Estas músicas já foram organizadas antes neste destino, vindas de outra pasta. Para cada uma o programa sugere ficar com a de <b>qualidade melhor</b>; mude o que quiser. Nada é apagado: quando a nova entra no lugar, a antiga vai para a pasta <b>Substituídas</b> dentro do destino.</p>
+  <h2>Músicas repetidas <small style="color:var(--mut);font-weight:400">(<span id="rep-n">0</span>)</small></h2>
+  <p class="hint">Músicas que já foram organizadas antes neste destino (vindas de outra pasta) ou que aparecem mais de uma vez na própria pasta das músicas. Para cada uma o programa sugere ficar com a de <b>qualidade melhor</b>; mude o que quiser. Nada é apagado: quando a nova entra no lugar de uma que já estava no destino, a antiga vai para a pasta <b>Substituídas</b>. Repetidas na própria pasta só deixam de ser copiadas.</p>
   <div class="fila"><button id="b-rep-sug" class="mini">Seguir as sugestões</button><button id="b-rep-dest" class="mini">Manter todas as do destino</button><button id="b-rep-nova" class="mini">Trocar todas pelas novas</button><small id="rep-msg" style="align-self:center;color:var(--mut)" role="status"></small></div>
-  <div class="tw"><table><thead><tr><th>Música</th><th>No destino</th><th>Na pasta nova</th><th>Ficar com</th></tr></thead><tbody id="rep-corpo"></tbody></table></div>
+  <div class="tw"><table><thead><tr><th>Música</th><th>A outra versão</th><th>Esta</th><th>Ficar com</th></tr></thead><tbody id="rep-corpo"></tbody></table></div>
 </section>
 
 <section id="s5" class="off fora" data-p="2">
@@ -330,7 +330,7 @@ async function terminou(job){
   if(job.tipo==="identificar") return identificou(r);
   const alvo=job.tipo==="copiar"?"#res-copiar":"#res-melhorar"; const el=$(alvo); el.style.display="block";
   if(job.tipo==="copiar"){ el.innerHTML=`<b class="ok">✔ Pronto.</b> ${r.copiados} copiadas, ${r.movidos||0} movidas de pasta, ${r.ignorados} já estavam no lugar, <span class="${r.erros?"bad":""}">${r.erros} com erro</span>.<br><small>Registro: ${esc(r.log)}</small> <button class="mini" id="b-ver-fim">Ver resumo</button>`; $("#b-ver-fim").onclick=()=>mostrarFim(r); mostrarFim(r); }
-  else el.innerHTML=`<b class="ok">✔ Pronto.</b> ${r.melhoradas} cópias melhoradas agora, ${r.reaproveitadas||0} aproveitadas de antes${r.movidas?` (${r.movidas} movidas para a pasta nova)`:""}, ${r.ja_bom} já estavam boas, ${r.repetidas_mantidas?`${r.repetidas_mantidas} repetidas puladas (ficou a do destino), `:""}${r.substituidas?`${r.substituidas} trocadas pelas novas (antigas em Substituídas), `:""} <span class="${r.erros?"bad":""}">${r.erros} com erro</span>.<br><small>Pasta: ${esc(r.pasta)}</small>${(r.mensagens||[]).map(m=>`<br><small class="bad">${esc(m)}</small>`).join("")}`;
+  else el.innerHTML=`<b class="ok">✔ Pronto.</b> ${r.melhoradas} cópias melhoradas agora, ${r.reaproveitadas||0} aproveitadas de antes${r.movidas?` (${r.movidas} movidas para a pasta nova)`:""}, ${r.ja_bom} já estavam boas, ${r.repetidas_mantidas?`${r.repetidas_mantidas} repetidas puladas (ficou a do destino), `:""}${r.substituidas?`${r.substituidas} trocadas pelas novas (antigas em Substituídas), `:""}${r.repetidas_na_origem?`${r.repetidas_na_origem} repetidas na própria pasta puladas, `:""} <span class="${r.erros?"bad":""}">${r.erros} com erro</span>.<br><small>Pasta: ${esc(r.pasta)}</small>${(r.mensagens||[]).map(m=>`<br><small class="bad">${esc(m)}</small>`).join("")}`;
 }
 
 /* ---------- tela final de confirmação da cópia ---------- */
@@ -344,7 +344,7 @@ function mostrarFim(r){
   $("#fim-card").innerHTML=`<h2>${r.cancelado?'<span class="warn">Cópia cancelada</span>':ok?'<span class="ok">✔ Cópia concluída e conferida</span>':'<span class="warn">Cópia concluída, com avisos</span>'}</h2>`+
     `<div class="hint">Pasta: <b>${esc(r.pasta_destino)}</b></div>`+
     `<div class="grade">${num(r.copiados,"músicas copiadas")}${num(r.movidos||0,"movidas para a pasta nova")}${num(r.ignorados,"já estavam no lugar")}${num(r.tags_gravadas,"com nome e tags organizados")}${num(r.capas_trocadas,"capas colocadas/melhoradas")}`+
-    `${r.repetidas_mantidas?num(r.repetidas_mantidas,"repetidas: ficou a do destino"):""}${r.substituidas?num(r.substituidas,"trocadas pelas novas (antigas em Substituídas)"):""}`+
+    `${r.repetidas_mantidas?num(r.repetidas_mantidas,"repetidas: ficou a do destino"):""}${r.substituidas?num(r.substituidas,"trocadas pelas novas (antigas em Substituídas)"):""}${r.repetidas_na_origem?num(r.repetidas_na_origem,"repetidas na própria pasta (não copiadas)"):""}`+
     `${num(r.revisao_total,"na pasta Revisão",r.revisao_total?"w":"")}${num(r.erros,"com erro",r.erros?"r":"")}</div>`+
     `<p class="hint">Conferência: ${r.ausentes?`<span class="bad">${r.ausentes} arquivo(s) não foram encontrados no destino.</span>`:'<span class="ok">todos os arquivos estão no destino.</span>'} `+
     `${r.originais_alterados?`<span class="bad">${r.originais_alterados} original(is) mudaram durante a cópia!</span>`:'<span class="ok">Os originais não foram alterados.</span>'}`+
@@ -382,6 +382,7 @@ let reps=[];
 const durTxt=s=>s?`${Math.floor(s/60)}:${String(Math.round(s%60)).padStart(2,"0")}`:"";
 const qualTxt=q=>(q.sem_perdas?"sem perdas":q.kbps?`${q.kbps} kbps`:"?")+(q.baixa?" ⚠":"");
 const MOTIVO_REP={melhor:"a nova tem qualidade melhor",pior:"a do destino tem qualidade melhor",parecida:"qualidade parecida: fica a do destino",desconhecida:"no destino só há a cópia melhorada: fica ela"};
+const MOTIVO_REP_ORIGEM={melhor:"esta tem qualidade melhor",pior:"a outra tem qualidade melhor",parecida:"qualidade parecida: fica a outra"};
 async function carregarRepetidas(){
   try{reps=(await api("/api/repetidas",params())).itens}catch(e){reps=[]}
   desenharRepetidas();
@@ -389,14 +390,14 @@ async function carregarRepetidas(){
 function desenharRepetidas(){
   $("#srep").classList.toggle("off",!reps.length); $("#rep-n").textContent=reps.length;
   const n=k=>reps.filter(r=>r.escolha===k).length;
-  $("#rep-msg").textContent=reps.length?`Ficam ${n("destino")} do destino, ${n("nova")} trocadas pelas novas, ${n("ambas")} com as duas.`:"";
-  const opc=(r,i)=>`<select data-i="${i}" aria-label="Com qual ficar: ${esc(r.nome)}">`+[["destino","Manter a do destino"],["nova","Trocar pela nova"],["ambas","Manter as duas"]].map(([v,t])=>`<option value="${v}" ${r.escolha===v?"selected":""}>${t}</option>`).join("")+`</select>`;
+  $("#rep-msg").textContent=reps.length?`${n("destino")} ficam com a outra versão, ${n("nova")} com esta, ${n("ambas")} com as duas.`:"";
+  const opc=(r,i)=>`<select data-i="${i}" aria-label="Com qual ficar: ${esc(r.nome)}">`+(r.na_origem?[["destino","Ficar com a outra"],["nova","Ficar com esta"],["ambas","Manter as duas"]]:[["destino","Manter a do destino"],["nova","Trocar pela nova"],["ambas","Manter as duas"]]).map(([v,t])=>`<option value="${v}" ${r.escolha===v?"selected":""}>${t}</option>`).join("")+`</select>`;
   $("#rep-corpo").innerHTML=reps.slice(0,500).map((r,i)=>`<tr><td title="${esc(r.nova.arquivo)}">${esc(r.nome)}</td>`+
-    `<td title="${esc(r.destino.copia||r.destino.melhorada||"")}">${qualTxt(r.destino)} · ${durTxt(r.destino.duracao)}${r.destino.so_melhorada?" <small>(melhorada)</small>":""}</td>`+
-    `<td>${qualTxt(r.nova)} · ${durTxt(r.nova.duracao)}</td>`+
-    `<td style="white-space:normal">${opc(r,i)} <small style="color:var(--mut)">${r.escolhida?"sua escolha":"sugestão: "+(MOTIVO_REP[r.motivo]||"")}</small></td></tr>`).join("")+
+    `<td title="${esc(r.destino.copia||r.destino.melhorada||r.destino.origem_antiga||"")}"><small style="color:var(--mut)">${r.na_origem?"na mesma pasta: "+esc(r.destino.arquivo):"no destino"}</small><br>${qualTxt(r.destino)} · ${durTxt(r.destino.duracao)}${r.destino.so_melhorada?" <small>(melhorada)</small>":""}</td>`+
+    `<td title="${esc(r.nova.arquivo)}"><small style="color:var(--mut)">${esc(r.nova.arquivo)}</small><br>${qualTxt(r.nova)} · ${durTxt(r.nova.duracao)}</td>`+
+    `<td style="white-space:normal">${opc(r,i)} <small style="color:var(--mut)">${r.escolhida?"sua escolha":"sugestão: "+((r.na_origem?MOTIVO_REP_ORIGEM:MOTIVO_REP)[r.motivo]||"")}</small></td></tr>`).join("")+
     (reps.length>500?`<tr><td colspan="4" class="hint">Mostrando 500 de ${reps.length}. Os botões acima valem para todas.</td></tr>`:"");
-  document.querySelectorAll("#rep-corpo select").forEach(s=>s.onchange=()=>escolherRepetidas({itens:[{caminho:reps[+s.dataset.i].caminho,escolha:s.value}]}));
+  document.querySelectorAll("#rep-corpo select").forEach(s=>s.onchange=()=>escolherRepetidas({itens:[{id:reps[+s.dataset.i].id,escolha:s.value}]}));
 }
 async function escolherRepetidas(corpo){
   erro(""); try{reps=(await api("/api/repetidas-escolher",corpo)).itens; desenharRepetidas()}catch(e){erro(e.message)}

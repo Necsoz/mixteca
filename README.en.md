@@ -74,6 +74,8 @@ If you choose **another source folder** with the same destination, Mixteca compa
 
 Two tracks count as the same when artist and title match and the duration is almost the same. Different versions, such as Extended and Radio Edit or original and remix, are not treated as duplicates. Nothing is deleted: when the new one takes its place, the old one goes to the `Replaced` folder inside the destination. Tracks that are not duplicates are organized as usual.
 
+The same applies to tracks that appear **more than once in the music folder itself** (for example, `Track.mp3` and `Track (1).mp3`): they show up in the same list, the program suggests keeping only the better-quality one, and the other is not copied (the original stays in the folder, untouched).
+
 ### Organizing again into the same destination
 If you add music or change the options and organize again into the same destination, Mixteca does not duplicate anything: copies whose folder changed are **moved**, copies already in place are skipped, and only new tracks are copied. The same applies to the `Improved` folder: everything improved before follows the new organization, even tracks left out of this run's choice (for example, "only low-quality ones").
 
@@ -132,7 +134,7 @@ python tests/e2e_identificacao_ui.py SCREENSHOT_DIR   # on-screen flow (needs Pl
 
 The Windows package is built by `.github/workflows/build-windows.yml` (PyInstaller + Inno Setup). Third-party licenses are listed in `LICENCAS.md`. The code and its comments are written in Portuguese.
 
-Layout: `organizador/analise.py` (BPM, key, quality) · `identificacao.py`, `decisao.py`, `casamento.py`, `classificador.py`, `provedores/` (metadata lookup and decisions) · `planejador.py` (folders and safe copying) · `repetidas.py` (duplicate tracks across folders) · `escrita.py` (tags on copies) · `melhoria.py` (audio) · `servidor.py` + `web/index.html` (interface).
+Layout: `organizador/analise.py` (BPM, key, quality) · `identificacao.py`, `decisao.py`, `casamento.py`, `classificador.py`, `provedores/` (metadata lookup and decisions) · `planejador.py` (folders and safe copying) · `repetidas.py` (duplicate tracks) · `escrita.py` (tags on copies) · `melhoria.py` (audio) · `servidor.py` + `web/index.html` (interface).
 
 ## License
 

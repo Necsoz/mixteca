@@ -132,7 +132,7 @@ def detectar(itens, por_caminho: dict, ja_existe: list[dict], ler_info, faixa_an
         cmp = 0 if so_melhorada else comparar(q_nova, q_dest)
         usados.add(it.origem)
         saida.append({
-            "caminho": it.origem, "nome": it.nome or Path(it.origem).stem,
+            "id": it.origem, "caminho": it.origem, "nome": it.nome or Path(it.origem).stem,
             "nova": {"arquivo": Path(it.origem).name, "duracao": f.duracao, **q_nova},
             "destino": {"copia": e["copia"], "melhorada": e["melhorada"], "origem_antiga": e["origem_antiga"],
                         "arquivo": Path(e["copia"] or e["melhorada"]).name, "duracao": dur, "so_melhorada": so_melhorada, **q_dest},
@@ -140,6 +140,53 @@ def detectar(itens, por_caminho: dict, ja_existe: list[dict], ler_info, faixa_an
             "motivo": "melhor" if cmp > 0 else ("pior" if cmp < 0 else ("desconhecida" if so_melhorada else "parecida")),
         })
     return saida
+
+
+def detectar_na_origem(itens, por_caminho: dict) -> list[dict]:
+    """Repetidas dentro da própria pasta de origem (duas cópias da mesma música).
+
+    Em cada grupo, a de melhor qualidade é a "principal"; cada uma das outras vira um par com ela, no mesmo formato
+    de detectar() (a principal ocupa o lugar de "destino", com na_origem=True). Sugestão: ficar só com a melhor."""
+    ordem = [it for it in itens if por_caminho.get(it.origem) is not None and not por_caminho[it.origem].erro]
+    qualidade = {it.origem: _qualidade(None, por_caminho[it.origem]) for it in ordem}
+    from functools import cmp_to_key
+    ordem.sort(key=cmp_to_key(lambda a, b: -comparar(qualidade[a.origem], qualidade[b.origem])))
+    principais: dict[str, list] = {}
+    saida = []
+    for it in ordem:
+        tags, f = it.tags or {}, por_caminho[it.origem]
+        chave = _chave_titulo(tags.get("titulo") or "")
+        if not chave:
+            continue
+        par = next((p for p in principais.get(chave, [])
+                    if (casamento.sim_artistas(tags.get("artista") or "", (p.tags or {}).get("artista") or "") >= 0.8)
+                    and not (f.duracao and por_caminho[p.origem].duracao and abs(f.duracao - por_caminho[p.origem].duracao) > TOLERANCIA_S)), None)
+        if par is None:
+            principais.setdefault(chave, []).append(it)
+            continue
+        fp = por_caminho[par.origem]
+        cmp = comparar(qualidade[it.origem], qualidade[par.origem])
+        saida.append({
+            "id": "na_origem:" + it.origem, "caminho": it.origem, "nome": it.nome or Path(it.origem).stem, "na_origem": True,
+            "nova": {"arquivo": Path(it.origem).name, "duracao": f.duracao, **qualidade[it.origem]},
+            "destino": {"copia": None, "melhorada": None, "origem_antiga": par.origem, "arquivo": Path(par.origem).name,
+                        "duracao": fp.duracao, "so_melhorada": False, "na_origem": True, **qualidade[par.origem]},
+            "sugestao": "nova" if cmp > 0 else "destino",
+            "motivo": "melhor" if cmp > 0 else ("pior" if cmp < 0 else "parecida"),
+        })
+    return saida
+
+
+def pular(lista: list[dict]) -> set[str]:
+    """Músicas da origem que não entram por causa de uma repetida na própria pasta (a escolha decide qual fica)."""
+    fora = set()
+    for r in lista:
+        if r.get("na_origem"):
+            if r["escolha"] == "destino":
+                fora.add(r["caminho"])
+            elif r["escolha"] == "nova":
+                fora.add(r["destino"]["origem_antiga"])
+    return fora
 
 
 def _ler(ler_info, caminho):

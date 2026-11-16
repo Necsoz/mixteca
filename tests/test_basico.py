@@ -392,6 +392,15 @@ def test_repetidas_de_outra_pasta():
     assert "Substituídas/Big Room/Kura - Tora.mp3" in nomes and "Big Room/KURA - Tora (Original Mix).mp3" in nomes
     assert "Big Room/Maddix - Lose Control.mp3" in nomes and not any("(2)" in n for n in nomes)
     assert (velha / "a.mp3").is_file() and (nova / "lc.mp3").is_file()       # originais intactos
+    # repetidas dentro da própria pasta: fica só a melhor (a escolha pode inverter ou manter as duas)
+    duas = [faixa(nova, "x1.mp3", "Tora", "Kura", 200, 128), faixa(nova, "x2.mp3", "Tora (Original Mix)", "Kura", 201, 320),
+            faixa(nova, "x3.mp3", "Tora (Extended Mix)", "Kura", 320, 320)]
+    p2 = planejador.planejar(duas, "A", ordem=["genero"])
+    na = repetidas.detectar_na_origem(p2, {f.caminho: f for f in duas})
+    assert len(na) == 1 and Path(na[0]["caminho"]).name == "x1.mp3" and Path(na[0]["destino"]["origem_antiga"]).name == "x2.mp3"
+    assert na[0]["sugestao"] == "destino" and na[0]["motivo"] == "pior"
+    assert repetidas.pular([{**na[0], "escolha": "destino"}]) == {duas[0].caminho}
+    assert repetidas.pular([{**na[0], "escolha": "nova"}]) == {duas[1].caminho} and repetidas.pular([{**na[0], "escolha": "ambas"}]) == set()
     assert repetidas.existentes(dest, dest / "Melhoradas") and not any("Substitu" in (e["copia"] or "") for e in repetidas.existentes(dest, dest / "Melhoradas"))
 
 

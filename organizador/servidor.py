@@ -264,20 +264,24 @@ def _calcular_repetidas(c, destino: Path) -> list[dict]:
     plano = _plano(c)
     ja = repetidas.existentes(destino, destino / planejador.nome_pasta("Melhoradas", _idioma()))
     por_caminho = {f.caminho: f for f in E.faixas}
-    itens = repetidas.detectar(plano, por_caminho, ja, ler_info, _faixa_antiga)
+    itens = repetidas.detectar(plano, por_caminho, ja, ler_info, _faixa_antiga) + repetidas.detectar_na_origem(plano, por_caminho)
     E.repetidas, E.repetidas_destino = itens, str(destino)
     return itens
 
 
 def _repetidas_com_escolha() -> list[dict]:
     escolhas = E.cache.repetidas_escolhas()
-    return [{**r, "escolha": escolhas.get(r["caminho"]) or r["sugestao"], "escolhida": r["caminho"] in escolhas} for r in E.repetidas]
+    return [{**r, "escolha": escolhas.get(r["id"]) or r["sugestao"], "escolhida": r["id"] in escolhas} for r in E.repetidas]
 
 
 def _mapa_repetidas(c, destino: Path) -> dict:
     if str(destino) != E.repetidas_destino:
         _calcular_repetidas(c, destino)
-    return {r["caminho"]: {**r["destino"], "escolha": r["escolha"]} for r in _repetidas_com_escolha()}
+    lista = _repetidas_com_escolha()
+    mapa = {r["caminho"]: {**r["destino"], "escolha": r["escolha"]} for r in lista if not r.get("na_origem")}
+    for caminho in repetidas.pular(lista):   # repetida na própria pasta: só uma das versões entra
+        mapa[caminho] = {"copia": None, "melhorada": None, "escolha": "destino", "na_origem": True}
+    return mapa
 
 
 def r_repetidas(c):
@@ -292,9 +296,9 @@ def r_repetidas(c):
 
 def r_repetidas_escolher(c):
     """Escolha de uma repetida (ou de todas): manter a do destino, trocar pela nova, manter as duas ou seguir a sugestão."""
-    pedidos = [(r["caminho"], c.get("todas")) for r in E.repetidas] if c.get("todas") else \
-              [(x.get("caminho"), x.get("escolha")) for x in c.get("itens") or []]
-    validos = {r["caminho"] for r in E.repetidas}
+    pedidos = [(r["id"], c.get("todas")) for r in E.repetidas] if c.get("todas") else \
+              [(x.get("id") or x.get("caminho"), x.get("escolha")) for x in c.get("itens") or []]
+    validos = {r["id"] for r in E.repetidas}
     for caminho, escolha in pedidos:
         if caminho in validos and (escolha in repetidas.ESCOLHAS or escolha == "sugestao"):
             E.cache.repetida_escolher(caminho, None if escolha == "sugestao" else escolha)
@@ -378,7 +382,7 @@ def r_melhorar(c):
     def trabalho(progresso):
         from .melhoria import _codec
         nonlocal itens, fora
-        cont = {"melhoradas": 0, "ja_bom": 0, "erros": 0, "mensagens": [], "pasta": str(saida), "repetidas_mantidas": 0, "substituidas": 0}
+        cont = {"melhoradas": 0, "ja_bom": 0, "erros": 0, "mensagens": [], "pasta": str(saida), "repetidas_mantidas": 0, "repetidas_na_origem": 0, "substituidas": 0}
         # repetidas: a escolhida "manter a do destino" não entra; na "trocar pela nova", a melhorada antiga sai do caminho
         mapa = _mapa_repetidas(c, destino) if destino.is_dir() else {}
         if mapa:
@@ -387,7 +391,7 @@ def r_melhorar(c):
             for n, i in enumerate(itens):
                 rep = mapa.get(i.origem)
                 if rep and rep["escolha"] == "destino":
-                    cont["repetidas_mantidas"] += n not in fora
+                    cont["repetidas_na_origem" if rep.get("na_origem") else "repetidas_mantidas"] += n not in fora
                     continue
                 if rep and rep["escolha"] == "nova" and n not in fora and rep.get("melhorada"):
                     if repetidas.guardar_substituida(rep["melhorada"], saida, planejador.nome_pasta("Substituídas", _idioma())):

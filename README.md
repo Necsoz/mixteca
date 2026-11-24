@@ -21,11 +21,10 @@ O Mixteca **só cria cópias**. As músicas originais nunca são movidas, altera
 
 ## Instalação
 
-1. Abra a aba **Actions** deste repositório.
-2. Escolha **Gerar programa para Windows** e clique em **Run workflow**.
-3. Quando terminar, baixe em **Artifacts**:
-   - **Mixteca-Instalador** (`Mixteca-Setup.exe`): instala, cria atalhos e tem desinstalador.
-   - **Mixteca-Portatil**: roda direto da pasta, sem instalar.
+Baixe a versão mais recente na página [**Releases**](https://github.com/Necsoz/mixteca/releases/latest):
+
+- **`Mixteca-Setup.exe`**: instala, cria atalhos e tem desinstalador.
+- **`Mixteca-Portatil.zip`**: descompacte e rode direto da pasta, sem instalar.
 
 Como o instalador não tem assinatura digital, o Windows pode mostrar o aviso "O Windows protegeu o computador". Clique em **Mais informações** e **Executar assim mesmo**.
 
@@ -134,7 +133,7 @@ python tests/test_identificacao.py
 python tests/e2e_identificacao_ui.py PASTA_PRINTS   # fluxo na tela (precisa do Playwright)
 ```
 
-O pacote do Windows é gerado por `.github/workflows/build-windows.yml` (PyInstaller + Inno Setup). As licenças das peças de terceiros estão em `LICENCAS.md`.
+O pacote do Windows é gerado por `.github/workflows/build-windows.yml` (PyInstaller + Inno Setup). Para publicar uma versão nova, crie uma tag que comece com `v` (ex.: `v1.0.1`): o workflow publica o instalador e a versão portátil em Releases. As licenças das peças de terceiros estão em `LICENCAS.md`.
 
 Estrutura: `organizador/analise.py` (BPM, tom, qualidade) · `identificacao.py`, `decisao.py`, `casamento.py`, `classificador.py`, `provedores/` (busca e decisão de metadados) · `planejador.py` (pastas e cópia segura) · `repetidas.py` (músicas repetidas) · `escrita.py` (tags nas cópias) · `melhoria.py` (áudio) · `servidor.py` + `web/index.html` (interface).
 

@@ -21,6 +21,16 @@ Mixteca **only creates copies**. Your original files are never moved, changed or
 - **Improves the audio (optional):** evens out the volume across tracks with one fixed adjustment per track (no compressor or limiter, so the volume does not keep going up and down) and cuts inaudible sub-bass, always in separate copies. If reaching the target volume would make a track clip, it stays slightly below the target.
 - **Shows what matches:** click a track in the list to highlight the ones with a compatible key and a similar BPM.
 
+## Screenshots
+
+| Choose the folders | Review your tracks |
+|---|---|
+| ![Step 1: folders](docs/en-1-folders.png) | ![Step 2: list with BPM and key](docs/en-2-review.png) |
+| **Build the organization** | **Checked result** |
+| ![Step 3: folder order and preview](docs/en-3-organize.png) | ![Step 4: copy summary](docs/en-4-copy.png) |
+
+<sub>Screenshots made with demo tracks (made-up artists and titles).</sub>
+
 ## Installation
 
 Download the latest version from the [**Releases**](https://github.com/Necsoz/mixteca/releases/latest) page:

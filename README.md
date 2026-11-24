@@ -19,6 +19,16 @@ O Mixteca **só cria cópias**. As músicas originais nunca são movidas, altera
 - **Melhora o áudio (opcional):** iguala o volume entre as músicas com um ajuste fixo por música (sem compressor nem limitador, então o volume não fica subindo e descendo) e corta subgrave inaudível, sempre em cópias separadas. Se chegar ao volume alvo fizesse a música estourar, ela fica um pouco abaixo do alvo.
 - **Mostra o que combina:** na lista, clique numa música e veja as de tom compatível e BPM parecido.
 
+## Telas
+
+| Escolher as pastas | Conferir as músicas |
+|---|---|
+| ![Passo 1: pastas](docs/pt-1-pastas.png) | ![Passo 2: lista com BPM e tom](docs/pt-2-conferir.png) |
+| **Montar a organização** | **Resultado conferido** |
+| ![Passo 3: ordem das pastas e prévia](docs/pt-3-organizar.png) | ![Passo 4: resumo da cópia](docs/pt-4-copiar.png) |
+
+<sub>Prints feitos com músicas de demonstração (artistas e títulos inventados).</sub>
+
 ## Instalação
 
 Baixe a versão mais recente na página [**Releases**](https://github.com/Necsoz/mixteca/releases/latest):

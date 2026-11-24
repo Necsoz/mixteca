@@ -23,11 +23,10 @@ Mixteca **only creates copies**. Your original files are never moved, changed or
 
 ## Installation
 
-1. Open the **Actions** tab of this repository.
-2. Choose **Gerar programa para Windows** ("Build the Windows program", the workflow name) and click **Run workflow**.
-3. When it finishes, download from **Artifacts**:
-   - **Mixteca-Instalador** (`Mixteca-Setup.exe`): the installer. It installs the program, creates shortcuts and includes an uninstaller.
-   - **Mixteca-Portatil**: the portable version. It runs straight from its folder, no installation.
+Download the latest version from the [**Releases**](https://github.com/Necsoz/mixteca/releases/latest) page:
+
+- **`Mixteca-Setup.exe`**: the installer. It installs the program, creates shortcuts and includes an uninstaller.
+- **`Mixteca-Portatil.zip`**: the portable version. Unzip it and run it straight from its folder, no installation.
 
 The installer is not digitally signed, so Windows may show a "Windows protected your PC" warning. Click **More info** and then **Run anyway**.
 
@@ -134,7 +133,7 @@ python tests/test_identificacao.py
 python tests/e2e_identificacao_ui.py SCREENSHOT_DIR   # on-screen flow (needs Playwright)
 ```
 
-The Windows package is built by `.github/workflows/build-windows.yml` (PyInstaller + Inno Setup). Third-party licenses are listed in `LICENCAS.md`. The code and its comments are written in Portuguese.
+The Windows package is built by `.github/workflows/build-windows.yml` (PyInstaller + Inno Setup). To publish a new version, create a tag starting with `v` (e.g. `v1.0.1`): the workflow publishes the installer and the portable version to Releases. Third-party licenses are listed in `LICENCAS.md`. The code and its comments are written in Portuguese.
 
 Layout: `organizador/analise.py` (BPM, key, quality) · `identificacao.py`, `decisao.py`, `casamento.py`, `classificador.py`, `provedores/` (metadata lookup and decisions) · `planejador.py` (folders and safe copying) · `repetidas.py` (duplicate tracks) · `escrita.py` (tags on copies) · `melhoria.py` (audio) · `servidor.py` + `web/index.html` (interface).
 

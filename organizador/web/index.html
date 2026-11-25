@@ -128,7 +128,7 @@ select:disabled{opacity:.45;cursor:not-allowed}
 #fim .card{background:var(--card);border:1px solid var(--bd);border-radius:18px;max-width:720px;width:100%;max-height:90vh;overflow:auto;padding:24px 26px;box-shadow:0 20px 60px #000a}
 #fim h2{font-size:22px;margin-bottom:10px}
 #fim .grade{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}
-#fim .num{background:var(--card2);border:1px solid var(--bd);border-radius:12px;padding:10px 12px}
+#fim .num{background:var(--card2);border:1px solid var(--bd);border-radius:12px;padding:10px 12px;min-width:0;overflow-wrap:break-word}
 #fim .num b{display:block;font-size:22px;color:var(--acc)}
 #fim .num.w b{color:var(--warn)}#fim .num.r b{color:var(--bad)}
 #fim ul{margin:6px 0 12px;padding-left:20px;color:var(--mut);font-size:14px}
@@ -350,7 +350,7 @@ function mostrarFim(r){
   const rev=(r.revisao||[]);
   $("#fim-card").innerHTML=`<h2>${r.cancelado?'<span class="warn">Cópia cancelada</span>':ok?'<span class="ok">✔ Cópia concluída e conferida</span>':'<span class="warn">Cópia concluída, com avisos</span>'}</h2>`+
     `<div class="hint">Pasta: <b>${esc(r.pasta_destino)}</b></div>`+
-    `<div class="grade">${num(r.copiados,"músicas copiadas")}${num(r.movidos||0,"movidas para a pasta nova")}${num(r.ignorados,"já estavam no lugar")}${num(r.tags_gravadas,"com nome e tags organizados")}${num(r.capas_trocadas,"capas colocadas/melhoradas")}`+
+    `<div class="grade">${num(r.copiados,"músicas copiadas")}${num(r.movidos||0,"movidas para a pasta nova")}${num(r.ignorados,"já estavam no lugar")}${num(r.tags_gravadas,"com nome e tags organizados")}${num(r.capas_trocadas,"capas colocadas/<wbr>melhoradas")}`+
     `${r.repetidas_mantidas?num(r.repetidas_mantidas,"repetidas: ficou a do destino"):""}${r.substituidas?num(r.substituidas,"trocadas pelas novas (antigas em Substituídas)"):""}${r.repetidas_na_origem?num(r.repetidas_na_origem,"repetidas na própria pasta (não copiadas)"):""}`+
     `${num(r.revisao_total,"na pasta Revisão",r.revisao_total?"w":"")}${num(r.erros,"com erro",r.erros?"r":"")}</div>`+
     `<p class="hint">Conferência: ${r.ausentes?`<span class="bad">${r.ausentes} arquivo(s) não foram encontrados no destino.</span>`:'<span class="ok">todos os arquivos estão no destino.</span>'} `+

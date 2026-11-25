@@ -232,7 +232,7 @@ TELA_EN: list[tuple[str, str]] = [
     ('"movidas para a pasta nova"', '"moved to the new folder"'),
     ('"já estavam no lugar"', '"already in place"'),
     ('"com nome e tags organizados"', '"with name and tags tidied"'),
-    ('"capas colocadas/melhoradas"', '"covers added/improved"'),
+    ('"capas colocadas/<wbr>melhoradas"', '"covers added/<wbr>improved"'),
     ('"na pasta Revisão"', '"in the Review folder"'),
     ('"com erro"', '"with errors"'),
     ('Conferência: ', 'Check: '),
